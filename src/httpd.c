@@ -1,35 +1,4 @@
-/* A TCP echo server.
- *
- * Receive a buffer on port 32000, turn it into upper case and return
- * it to the sender.
- *
- * Copyright (c) 2016, Marcel Kyas
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of Reykjavik University nor the
- *       names of its contributors may be used to endorse or promote products
- *       derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL MARCEL
- * KYAS NOR REYKJAVIK UNIVERSITY BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -39,6 +8,8 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <arpa/inet.h>
+#include <netdb.h>
+
 
 void unsupported_request(int connfd);
 
@@ -65,21 +36,15 @@ int main()
     for (;;) {
         // We first have to accept a TCP connection, connfd is a fresh
         // handle dedicated to this connection.
-        
-    	char ip_addr[INET_ADDRSTRLEN];
-    	char* drasl2 = inet_ntoa(client.sin_addr);
-//        ssize_t n = recv(connfd, buffer, sizeof(buffer) - 1, 0);
-    	socklen_t len = (socklen_t) sizeof(client);
-
+        //client ip address
+        socklen_t len = (socklen_t) sizeof(client);
         int connfd = accept(sockfd, (struct sockaddr *) &client, &len);
-
-        //send(connfd, drasl, strlen(drasl), 0);
-
-    	inet_ntop(AF_INET, &drasl2, ip_addr, INET_ADDRSTRLEN);
         
-
-    	fprintf(stdout, "%s\n", ip_addr);
-    	fflush(stdout);
+        fprintf(stdout, "%s\n", ip_addr);
+        fflush(stdout);
+        fprintf(stdout, "%s %s\n", hostIP, hostPort);
+        fflush(stdout);
+        
         // Receive from connfd, not sockfd.
         ssize_t n = recv(connfd, buffer, sizeof(buffer) - 1, 0);
         if(buffer[0] == 'G'){
@@ -114,4 +79,16 @@ void unsupported_request(int connfd){
     "</html>\n";
 
     send(connfd, drasl, strlen(drasl), 0);
+}
+//TODO:: taka in client og len connfd
+void get_request() {
+    struct sockaddr_in* cock_address = (struct sockaddr_in*)&client;
+        struct in_addr client_ip = cock_address->sin_addr;
+
+        char hostIP[1025];
+        char hostPort[32];
+        getnameinfo((struct  sockaddr *)&client,len, hostIP, sizeof(hostIP), hostPort, sizeof(hostPort), NI_NUMERICHOST | NI_NUMERICSERV);
+        char ip_addr[INET_ADDRSTRLEN];  
+        inet_ntop(AF_INET, &client_ip, ip_addr, INET_ADDRSTRLEN);
+       
 }
