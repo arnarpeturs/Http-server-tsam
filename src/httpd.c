@@ -1,5 +1,3 @@
-
-
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -9,9 +7,12 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <time.h>
+#include <stdlib.h>
 
-
+void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr);
 void unsupported_request(int connfd);
+void client_logger(char* host_ip, char* host_port, char* in_buffer);
 
 int main()
 {
@@ -40,15 +41,20 @@ int main()
         socklen_t len = (socklen_t) sizeof(client);
         int connfd = accept(sockfd, (struct sockaddr *) &client, &len);
         
-        fprintf(stdout, "%s\n", ip_addr);
-        fflush(stdout);
-        fprintf(stdout, "%s %s\n", hostIP, hostPort);
-        fflush(stdout);
+        // get info for the get request
+        struct sockaddr_in* cock_address = (struct sockaddr_in*)&client;
+        struct in_addr client_ip = cock_address->sin_addr;
+        char host_ip[1025];
+        char host_port[32];
+        getnameinfo((struct sockaddr *)&client,len, host_ip, sizeof(host_ip), host_port, sizeof(host_port), NI_NUMERICHOST | NI_NUMERICSERV);
+        char ip_addr[INET_ADDRSTRLEN];  
+        inet_ntop(AF_INET, &client_ip, ip_addr, INET_ADDRSTRLEN);
         
         // Receive from connfd, not sockfd.
         ssize_t n = recv(connfd, buffer, sizeof(buffer) - 1, 0);
+        client_logger(host_ip, host_port, buffer);
         if(buffer[0] == 'G'){
-
+            get_request(connfd, host_ip, host_port, ip_addr);   
         }
         else if(buffer[0] == 'P'){
 
@@ -80,15 +86,60 @@ void unsupported_request(int connfd){
 
     send(connfd, drasl, strlen(drasl), 0);
 }
-//TODO:: taka in client og len connfd
-void get_request() {
-    struct sockaddr_in* cock_address = (struct sockaddr_in*)&client;
-        struct in_addr client_ip = cock_address->sin_addr;
 
-        char hostIP[1025];
-        char hostPort[32];
-        getnameinfo((struct  sockaddr *)&client,len, hostIP, sizeof(hostIP), hostPort, sizeof(hostPort), NI_NUMERICHOST | NI_NUMERICSERV);
-        char ip_addr[INET_ADDRSTRLEN];  
-        inet_ntop(AF_INET, &client_ip, ip_addr, INET_ADDRSTRLEN);
-       
+void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr) {
+    char send_buffer[1024];
+    char* prequel = "HTTP/1.1 200 OK\n"
+    "Content-type: text/html\n"
+    "\n"
+    "<html>\n"
+    " <body>\n"
+    "  <p>\n";
+    char* sequel = "  </p>\n"
+    " </body>\n"
+    "</html>\n";
+
+    send_buffer[0] = '\0';
+    strcat(send_buffer, prequel);
+    strcat(send_buffer, "http://");
+    strcat(send_buffer, ip_addr);
+    strcat(send_buffer, " ");
+    strcat(send_buffer, host_ip);
+    strcat(send_buffer, ":");
+    strcat(send_buffer, host_port);
+    strcat(send_buffer, sequel);
+
+
+    send(connfd, send_buffer, strlen(send_buffer), 0);
+}
+void client_logger(char* host_ip, char* host_port, char* in_buffer){
+    char to_file_buffer[1000];
+    char* buff_split;
+    to_file_buffer[0] = '\0';
+    FILE *fptr;
+
+    buff_split = strtok(in_buffer, " ");
+
+    fptr = fopen("client_logger.log", "w");
+    if(fptr == NULL)
+    {
+      printf("Error!");
+      exit(1);
+    }
+    // timestamp : <client ip>:<client port> <request method> <requested URL> : <response code> 
+    time_t ltime; /* calendar time */
+    ltime=time(NULL); /* get current cal time */
+
+    strcat(to_file_buffer, asctime(localtime(&ltime)));
+    strcat(to_file_buffer, " : ");
+    strcat(to_file_buffer, host_ip);
+    strcat(to_file_buffer, ":");
+    strcat(to_file_buffer, host_port);
+    strcat(to_file_buffer, " ");
+    strcat(to_file_buffer, buff_split[0]);
+    strcat(to_file_buffer, " ");
+    strcat(to_file_buffer, buff_split[1] + " : <responsecode>");
+
+    fprintf(fptr,"%s", to_file_buffer);
+    fclose(fptr);
 }
