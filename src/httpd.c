@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <glib.h>
 
+void post_request();
 void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr);
 void unsupported_request(int connfd);
 void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* ip_addr);
@@ -85,10 +86,16 @@ void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_
         }
 }
 
+//TODO: IMPLEMENT
+void post_request(){
+
+}
+
 /*
 * Generates response to request that is not GET, POST or HEAD
 */
 void unsupported_request(int connfd){
+    //In memory html
     char* drasl = "HTTP/1.1 404 Not Found\n"
     "Content-type: text/html\n"
     "\n"
@@ -105,8 +112,10 @@ void unsupported_request(int connfd){
 /*
 * Generates response to GET request
 */
+//TODO: setja inn dót fyrir post request
 void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr) {
     char send_buffer[1024];
+    //In memory html
     char* prequel = "HTTP/1.1 200 OK\n"
     "Content-type: text/html\n"
     "\n"
@@ -131,13 +140,16 @@ void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr) {
     send(connfd, send_buffer, strlen(send_buffer), 0);
 }
 
+
+//TODO: komast að því hvernig þetta shit virkar
 /*
 * Generates response to HEAD request. 
 */
 void head_request(int connfd){
-    char* head_buffer;
+    char head_buffer[1024];
     time_t ltime; /* calendar time */
     ltime=time(NULL); /* get current cal time */
+    //In memory header
     char* prequel = "HTTP/1.1 200 OK\n"
     "\n"
     "<html>\n"
@@ -150,7 +162,7 @@ void head_request(int connfd){
     "Server: blah.blah\n"
     " </head>\n"
     "</html>\n";
-    //head_buffer[0] = '\0';
+    head_buffer[0] = '\0';
 
     strcat(head_buffer, prequel);
     strcat(head_buffer, asctime(localtime(&ltime)));
