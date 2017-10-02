@@ -9,10 +9,13 @@
 #include <netdb.h>
 #include <time.h>
 #include <stdlib.h>
+#include <glib.h>
 
 void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr);
 void unsupported_request(int connfd);
-void client_logger(char* host_ip, char* host_port, char* in_buffer);
+void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* ip_addr);
+void head_request(int connfd);
+void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
 
 int main()
 {
@@ -50,9 +53,24 @@ int main()
         char ip_addr[INET_ADDRSTRLEN];  
         inet_ntop(AF_INET, &client_ip, ip_addr, INET_ADDRSTRLEN);
         
+        
         // Receive from connfd, not sockfd.
         ssize_t n = recv(connfd, buffer, sizeof(buffer) - 1, 0);
-        client_logger(host_ip, host_port, buffer);
+        client_logger(host_ip, host_port, buffer, ip_addr);
+        request(buffer, connfd, host_ip, host_port, ip_addr);
+
+        buffer[n] = '\0';
+       	fprintf(stdout, "Received:\n%s\n", buffer);
+       	fflush(stdout);
+       	break;
+    }
+}
+
+/*
+* What kind of request did we recieve. 
+* Calls appropriate function to generate respnse.
+*/
+void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr){
         if(buffer[0] == 'G'){
             get_request(connfd, host_ip, host_port, ip_addr);   
         }
@@ -60,19 +78,16 @@ int main()
 
         }
         else if(buffer[0] == 'H'){
-
+            head_request(connfd);
         }
         else{
             unsupported_request(connfd);
         }
-
-        //buffer[n] = '\0';
-       	fprintf(stdout, "Received:\n%s\n", buffer);
-       	fflush(stdout);
-       	break;
-    }
 }
 
+/*
+* Generates response to request that is not GET, POST or HEAD
+*/
 void unsupported_request(int connfd){
     char* drasl = "HTTP/1.1 404 Not Found\n"
     "Content-type: text/html\n"
@@ -87,6 +102,9 @@ void unsupported_request(int connfd){
     send(connfd, drasl, strlen(drasl), 0);
 }
 
+/*
+* Generates response to GET request
+*/
 void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr) {
     char send_buffer[1024];
     char* prequel = "HTTP/1.1 200 OK\n"
@@ -112,15 +130,47 @@ void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr) {
 
     send(connfd, send_buffer, strlen(send_buffer), 0);
 }
-void client_logger(char* host_ip, char* host_port, char* in_buffer){
+
+/*
+* Generates response to HEAD request. 
+*/
+void head_request(int connfd){
+    char* head_buffer;
+    time_t ltime; /* calendar time */
+    ltime=time(NULL); /* get current cal time */
+    char* prequel = "HTTP/1.1 200 OK\n"
+    "\n"
+    "<html>\n"
+    " <head>\n"
+    "Connection: keep-alive\n"
+    "Content-Lenght: 69\n"
+    "Content-type: text/html\n"
+    "Date: "; 
+    char* sequel = "Location: 127.0.0.1\n"
+    "Server: blah.blah\n"
+    " </head>\n"
+    "</html>\n";
+    //head_buffer[0] = '\0';
+
+    strcat(head_buffer, prequel);
+    strcat(head_buffer, asctime(localtime(&ltime)));
+    strcat(head_buffer,"\r\n");
+    strcat(head_buffer, sequel);
+
+    send(connfd, head_buffer, strlen(head_buffer), 0);
+}
+
+/*
+* Logs information from client that sends request
+*/
+void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* ip_addr){
     char to_file_buffer[1000];
-    char* buff_split;
+    char* request_method;
+    char* response_code;
     to_file_buffer[0] = '\0';
     FILE *fptr;
 
-    buff_split = strtok(in_buffer, " ");
-
-    fptr = fopen("client_logger.log", "w");
+    fptr = fopen("client_logger.log", "a");
     if(fptr == NULL)
     {
       printf("Error!");
@@ -130,16 +180,39 @@ void client_logger(char* host_ip, char* host_port, char* in_buffer){
     time_t ltime; /* calendar time */
     ltime=time(NULL); /* get current cal time */
 
+    if(in_buffer[0] == 'G'){
+        request_method = "GET";
+        response_code = "200 OK";
+    }
+    else if(in_buffer[0] == 'P') {
+        request_method = "POST";
+        response_code = "200 OK";
+    }
+    else if(in_buffer[0] == 'H') {
+        request_method = "HEAD";
+        response_code = "200 OK";
+    }
+    else{
+        //custom response for unautherised request
+        request_method = "ERROR";
+        response_code = "400 Bad Request";
+    }
+
+    char** split_buffer = g_strsplit(in_buffer, " ", 3);
+    
     strcat(to_file_buffer, asctime(localtime(&ltime)));
     strcat(to_file_buffer, " : ");
     strcat(to_file_buffer, host_ip);
     strcat(to_file_buffer, ":");
     strcat(to_file_buffer, host_port);
     strcat(to_file_buffer, " ");
-    strcat(to_file_buffer, buff_split[0]);
+    strcat(to_file_buffer, request_method);
     strcat(to_file_buffer, " ");
-    strcat(to_file_buffer, buff_split[1] + " : <responsecode>");
+    strcat(to_file_buffer, ip_addr);
+    strcat(to_file_buffer, split_buffer[1]);
+    strcat(to_file_buffer, " : ");
+    strcat(to_file_buffer, response_code);
 
-    fprintf(fptr,"%s", to_file_buffer);
+    fprintf(fptr,"\r\n%s", to_file_buffer);
     fclose(fptr);
 }
