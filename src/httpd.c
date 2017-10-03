@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <glib.h>
 
-void post_request();
+void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
 void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr);
 void unsupported_request(int connfd);
 void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* ip_addr);
@@ -61,8 +61,8 @@ int main()
         request(buffer, connfd, host_ip, host_port, ip_addr);
 
         buffer[n] = '\0';
-       	fprintf(stdout, "Received:\n%s\n", buffer);
-       	fflush(stdout);
+       	//fprintf(stdout, "Received:\n%s\n", buffer);
+       	//fflush(stdout);
        	break;
     }
 }
@@ -76,7 +76,7 @@ void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_
             get_request(connfd, host_ip, host_port, ip_addr);   
         }
         else if(buffer[0] == 'P'){
-
+            post_request(buffer, connfd, host_ip, host_port, ip_addr);
         }
         else if(buffer[0] == 'H'){
             head_request(connfd);
@@ -87,8 +87,37 @@ void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_
 }
 
 //TODO: IMPLEMENT
-void post_request(){
+void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr){
+    char send_buffer[1024];
+    //In memory html
+    char* prequel = "HTTP/1.1 200 OK\n"
+    "Content-type: text/html\n"
+    "\n"
+    "<html>\n"
+    " <body>\n"
+    "  <p>\n";
+    char* sequel = "  </p>\n"
+    " </body>\n"
+    "</html>\n";
 
+    char** split_buffer = g_strsplit(in_buffer, "\r\n\r\n", 2);
+
+    send_buffer[0] = '\0';
+    strcat(send_buffer, prequel);
+    strcat(send_buffer, "http://");
+    strcat(send_buffer, ip_addr);
+    strcat(send_buffer, " ");
+    strcat(send_buffer, host_ip);
+    strcat(send_buffer, ":");
+    strcat(send_buffer, host_port);
+    strcat(send_buffer, " ");
+    strcat(send_buffer,split_buffer[1]);
+    strcat(send_buffer, sequel);
+    
+    //fprintf(stdout, "%s\n", split_buffer[1]);
+    //fflush(stdout);
+
+    send(connfd, send_buffer, strlen(send_buffer), 0);
 }
 
 /*
@@ -136,12 +165,9 @@ void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr) {
     strcat(send_buffer, host_port);
     strcat(send_buffer, sequel);
 
-
     send(connfd, send_buffer, strlen(send_buffer), 0);
 }
 
-
-//TODO: komast að því hvernig þetta shit virkar
 /*
 * Generates response to HEAD request. 
 */
