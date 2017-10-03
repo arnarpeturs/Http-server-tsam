@@ -10,6 +10,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <glib.h>
+#include <assert.h>
 
 void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
 void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr);
@@ -86,14 +87,26 @@ void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_
         }
 }
 
+void prepend(char* prequel, char* sequel) {
+    size_t len = strlen(sequel);
+    size_t i;
+
+    memmove(prequel + len, prequel, strlen(sequel) + 1);
+
+    for(i = 0; i < len; i++){
+        prequel[i] = sequel[i];
+    }
+}
+
 //TODO: IMPLEMENT
 void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr){
     char send_buffer[1024];
     //In memory html
     char* prequel = "HTTP/1.1 200 OK\n"
     "Content-type: text/html\n"
-    "\n"
-    "<html>\n"
+    "content-lenght: "
+    "\n";
+    char* prequel2 = "<html>\n"
     " <body>\n"
     "  <p>\n";
     char* sequel = "  </p>\n"
@@ -103,7 +116,7 @@ void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, c
     char** split_buffer = g_strsplit(in_buffer, "\r\n\r\n", 2);
 
     send_buffer[0] = '\0';
-    strcat(send_buffer, prequel);
+    strcat(send_buffer, prequel2);
     strcat(send_buffer, "http://");
     strcat(send_buffer, ip_addr);
     strcat(send_buffer, " ");
@@ -114,6 +127,7 @@ void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, c
     strcat(send_buffer,split_buffer[1]);
     strcat(send_buffer, sequel);
     
+    size_t content_lenght = strlen(send_buffer);
     //fprintf(stdout, "%s\n", split_buffer[1]);
     //fflush(stdout);
 
@@ -176,30 +190,25 @@ void head_request(int connfd){
     time_t ltime; /* calendar time */
     ltime=time(NULL); /* get current cal time */
     //In memory header
-    char* prequel = "HTTP/1.1 200 OK\n"
-    "\n"
-    "<html>\n"
-    " <head>\n"
-    "Connection: keep-alive\n"
-    "Content-Lenght: 69\n"
-    "Content-type: text/html\n"
+    char* prequel = "HTTP/1.1 200 OK\n"    
+    "Connection: close\r\n"
+    "Content-type: text/html \r\n"
+    "Content-length: 0"
     "Date: "; 
-    char* sequel = "Location: 127.0.0.1\n"
-    "Server: blah.blah\n"
-    " </head>\n"
-    "</html>\n";
+    char* sequel = "Location: 127.0.0.1\r\n"
+    "Server: blah.blah\r\n";
     head_buffer[0] = '\0';
 
     strcat(head_buffer, prequel);
     strcat(head_buffer, asctime(localtime(&ltime)));
-    strcat(head_buffer,"\r\n");
+    strcat(head_buffer,"\n");
     strcat(head_buffer, sequel);
 
     send(connfd, head_buffer, strlen(head_buffer), 0);
 }
 
 /*
-* Logs information from client that sends request
+* Logs information from client
 */
 void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* ip_addr){
     char to_file_buffer[1000];
