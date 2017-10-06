@@ -12,6 +12,12 @@
 #include <glib.h>
 #include <assert.h>
 
+#define DEBUG(x) (fprintf(stdout(x)); fflush(stdout);
+
+/*
+* poll: https://www.ibm.com/support/knowledgecenter/en/ssw_i5_54/rzab6/poll.htm
+*/
+
 void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
 void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr);
 void unsupported_request(int connfd);
@@ -47,8 +53,8 @@ int main()
         int connfd = accept(sockfd, (struct sockaddr *) &client, &len);
         
         // get info for the get request
-        struct sockaddr_in* cock_address = (struct sockaddr_in*)&client;
-        struct in_addr client_ip = cock_address->sin_addr;
+        struct sockaddr_in* client_address = (struct sockaddr_in*)&client;
+        struct in_addr client_ip = client_address->sin_addr;
         char host_ip[1025];
         char host_port[32];
         getnameinfo((struct sockaddr *)&client,len, host_ip, sizeof(host_ip), host_port, sizeof(host_port), NI_NUMERICHOST | NI_NUMERICSERV);
@@ -74,7 +80,12 @@ int main()
 */
 void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr){
         if(buffer[0] == 'G'){
-            get_request(connfd, host_ip, host_port, ip_addr);   
+            if(buffer[5] != ' '){
+                unsupported_request(connfd);
+            }
+            else {
+                get_request(connfd, host_ip, host_port, ip_addr);      
+            }     
         }
         else if(buffer[0] == 'P'){
             post_request(buffer, connfd, host_ip, host_port, ip_addr);
@@ -87,26 +98,19 @@ void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_
         }
 }
 
-void prepend(char* prequel, char* sequel) {
-    size_t len = strlen(sequel);
-    size_t i;
-
-    memmove(prequel + len, prequel, strlen(sequel) + 1);
-
-    for(i = 0; i < len; i++){
-        prequel[i] = sequel[i];
-    }
-}
-
 //TODO: IMPLEMENT
 void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr){
     char send_buffer[1024];
+    char final_send_buffer[1024];
+    send_buffer[0] = '\0';
+    final_send_buffer[0] = '\0';
     //In memory html
     char* prequel = "HTTP/1.1 200 OK\n"
     "Content-type: text/html\n"
-    "content-lenght: "
-    "\n";
-    char* prequel2 = "<html>\n"
+    "content-lenght: ";
+    
+    char* prequel2 = "\n"
+    "<html>\n"
     " <body>\n"
     "  <p>\n";
     char* sequel = "  </p>\n"
@@ -128,10 +132,15 @@ void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, c
     strcat(send_buffer, sequel);
     
     size_t content_lenght = strlen(send_buffer);
-    //fprintf(stdout, "%s\n", split_buffer[1]);
-    //fflush(stdout);
 
-    send(connfd, send_buffer, strlen(send_buffer), 0);
+    strcat(final_send_buffer, prequel);
+    sprintf(final_send_buffer + strlen(final_send_buffer), "%zu", content_lenght);
+    strcat(final_send_buffer, send_buffer);
+
+    fprintf(stdout, "%s\n", final_send_buffer);
+    fflush(stdout);
+
+    send(connfd, final_send_buffer, strlen(final_send_buffer), 0);
 }
 
 /*
@@ -139,13 +148,12 @@ void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, c
 */
 void unsupported_request(int connfd){
     //In memory html
-    char* drasl = "HTTP/1.1 404 Not Found\n"
+    char* drasl = "404 Not Found\n"
     "Content-type: text/html\n"
     "\n"
     "<html>\n"
     " <body>\n"
     "  <h1>Not Found</h1>\n"
-    "  <p>Luger pistol</p>\n"
     " </body>\n"
     "</html>\n";
 
@@ -155,7 +163,6 @@ void unsupported_request(int connfd){
 /*
 * Generates response to GET request
 */
-//TODO: setja inn dót fyrir post request
 void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr) {
     char send_buffer[1024];
     //In memory html
@@ -196,7 +203,7 @@ void head_request(int connfd){
     "Content-length: 0"
     "Date: "; 
     char* sequel = "Location: 127.0.0.1\r\n"
-    "Server: blah.blah\r\n";
+    "Server: cool server\r\n";
     head_buffer[0] = '\0';
 
     strcat(head_buffer, prequel);
