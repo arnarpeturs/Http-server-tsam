@@ -11,12 +11,24 @@
 #include <stdlib.h>
 #include <glib.h>
 #include <assert.h>
-#include <sys.pollh.>
+#include <sys/poll.h>
+#include <sys/ioctl.h>
+#include <errno.h>
 
+#define ISTRUE 1
+#define ISFALSE 0
+
+typedef struct pollfd pollfd;
 /*
 * poll: https://www.ibm.com/support/knowledgecenter/en/ssw_i5_54/rzab6/poll.htm
 */
+void debug(const char* x){
+    fprintf(stdout, "%s\n", x);
+    fflush(stdout);
+}
 
+//void cleanup(int nfds, pollfd *fds); TODO!!!!!!!!1
+//void start_server(int *sockfd, struct sockaddr_in *server);
 void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
 void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr);
 void unsupported_request(int connfd);
@@ -26,31 +38,158 @@ void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_
 
 int main()
 {
-    int sockfd;
+    int sockfd = 0, rc, len;
+    int run_server = 1, close_conn = 0;
+    int connfd = 0;
+    int nfds = 1, current_size = 0;
+    int compress_array = 0;
     struct sockaddr_in server, client;
     char buffer[1024];
+    pollfd fds[200];
 
-    // Create and bind a TCP socket.
+    debug("starting server");
+
+    int on = 1;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if(sockfd < 0){
+        perror("socket failed");
+        exit(-1);
+    }
 
-    // Network functions need arguments in network byte order instead of
-    // host byte order. The macros htonl, htons convert the values.
+    rc = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,(char*)&on, sizeof(on));
+    if(rc < 0){
+        perror("setsockopt failed");
+        close(sockfd);
+        exit(-1);
+    }
+    
+    rc = ioctl(sockfd, FIONBIO, (char*)&on);
+    if(rc < 0){
+        perror("ioctl failed");
+        close(sockfd);
+        exit(-1);
+    }
     memset(&server, 0, sizeof(server));
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = htonl(INADDR_ANY);
-    server.sin_port = htons(6969);
-    bind(sockfd, (struct sockaddr *) &server, (socklen_t) sizeof(server));
+    server.sin_port = htons(32000);
+    rc = bind(sockfd, (struct sockaddr *)&server, (socklen_t) sizeof(server));
+    if(rc < 0){
+        perror("bind failed");
+        exit(-1);
+    }
+    rc = listen(sockfd, 32);
+    if(rc < 0){
+        perror("listen failed");
+        exit(-1);
+    }
 
+    memset(fds, 0, sizeof(fds));
+    fds[0].fd = sockfd;
+    fds[0].events = POLLIN;
+
+    //poll!!
     // Before the server can accept buffers, it has to listen to the
-    // welcome port. A backlog of one connection is allowed.
-    listen(sockfd, 13);
-    for (;;) {
-        // We first have to accept a TCP connection, connfd is a fresh
+    // welcome port. A backlog of one connection is allowed.        // We first have to accept a TCP connection, connfd is a fresh
         // handle dedicated to this connection.
         //client ip address
-        socklen_t len = (socklen_t) sizeof(client);
-        int connfd = accept(sockfd, (struct sockaddr *) &client, &len);
-        
+        while(run_server == ISTRUE){
+            debug("server running");
+            rc = poll(fds, nfds, 30000);
+            debug("poll received");
+            if(rc < 0){
+                perror("poll failed");
+                break;
+            }
+            if(rc == 0){
+                fprintf(stdout, "%s\n", "timeout after 30 secs");
+                fflush(stdout);
+                break;
+            }
+            
+                current_size = nfds;
+                for(int i = 0; i < current_size; i++){
+                    if(fds[i].revents == 0){
+                        continue;
+                    }
+                    if(fds[i].revents != POLLIN){
+                        debug("revent error");
+                        run_server = ISFALSE;
+                        break;
+                    }
+                    if(fds[i].fd == sockfd){
+                        debug("listening socket is readable");
+
+                        while(connfd != -1){
+                            connfd = accept(sockfd, NULL, NULL);
+                            //TODO:
+                            if(connfd < 0){
+                                if(errno != EWOULDBLOCK){
+                                    perror("accept failed");
+                                    run_server = ISFALSE;
+                                }
+                                break;
+                            }
+                            debug("new connection");
+                            fds[nfds].fd = connfd;
+                            fds[nfds].events = POLLIN;
+                            nfds++;
+                        }
+                    }
+                    else{
+                        debug("fd is readable");
+                        close_conn = ISFALSE;
+                        while(ISTRUE){
+                            rc = recv(fds[i].fd, buffer, sizeof(buffer), 0);
+                            if(rc < 0){
+                                if(errno != EWOULDBLOCK){
+                                    perror("recv failed");
+                                    close_conn = ISTRUE;
+                                }
+                                break;
+                            }
+                            if(rc == 0){
+                                debug("connection closed by client");
+                                close_conn = ISTRUE;
+                                break;
+                            }
+                            len = rc; 
+                            printf(" %d bytes recieved\n", len);
+                            rc = send(fds[i].fd, buffer, len , 0);
+                            if(rc < 0){
+                                perror("send failed");
+                                close_conn = ISTRUE;
+                                break;
+                            }
+                        }
+                        if(close_conn){
+                            close(fds[i].fd);
+                            fds[i].fd = -1;
+                            compress_array = ISTRUE;
+                        }
+                    }
+                }
+                if(compress_array){
+                    compress_array = ISFALSE;
+                    for(int i = 0; i < nfds; i++){
+                        if(fds[i].fd == -1){
+                            for(int j = i; j < nfds; j++){
+                                fds[j].fd = fds[j+1].fd;
+                            }
+                            nfds--;
+                        }
+                    }
+                }
+            
+        }
+    for(int i = 0; i < nfds; i++){
+        if(fds[i].fd >= 0){
+            close(fds[i].fd);
+        }
+    }
+        /*socklen_t len = (socklen_t) sizeof(client);
+        connfd = accept(sockfd, (struct sockaddr *)&client, &len);
+        debug("accept");
         // get info for the get request
         struct sockaddr_in* client_address = (struct sockaddr_in*)&client;
         struct in_addr client_ip = client_address->sin_addr;
@@ -69,10 +208,47 @@ int main()
         buffer[n] = '\0';
        	//fprintf(stdout, "Received:\n%s\n", buffer);
        	//fflush(stdout);
-       	break;
-    }
+       	break;*/
+    
 }
 
+/*
+void start_server(int *sockfd, struct sockaddr_in *server){
+    int rc, on = 1;
+    *sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if(*sockfd < 0){
+        perror("socket failed");
+        exit(-1);
+    }
+
+    rc = setsockopt(*sockfd, SOL_SOCKET, SO_REUSEADDR,(char*)&on, sizeof(on));
+    if(rc < 0){
+        perror("setsockopt failed");
+        close(*sockfd);
+        exit(-1);
+    }
+    
+    rc = ioctl(*sockfd, FIONBIO, (char*)&on);
+    if(rc < 0){
+        perror("ioctl failed");
+        close(*sockfd);
+        exit(-1);
+    }
+    memset(server, 0, sizeof(struct sockaddr_in));
+    server->sin_family = AF_INET;
+    server->sin_addr.s_addr = htonl(INADDR_ANY);
+    server->sin_port = htons(32000);
+    rc = bind(*sockfd, (struct sockaddr *)server, (socklen_t) sizeof(struct sockaddr_in));
+    if(rc < 0){
+        perror("bind failed");
+        exit(-1);
+    }
+    rc = listen(*sockfd, 32);
+    if(rc < 0){
+        perror("listen failed");
+        exit(-1);
+    }
+}*/
 /*
 * What kind of request did we recieve. 
 * Calls appropriate function to generate respnse.
