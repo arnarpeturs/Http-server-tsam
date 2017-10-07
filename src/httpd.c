@@ -11,8 +11,7 @@
 #include <stdlib.h>
 #include <glib.h>
 #include <assert.h>
-
-#define DEBUG(x) (fprintf(stdout(x)); fflush(stdout);
+#include <sys.pollh.>
 
 /*
 * poll: https://www.ibm.com/support/knowledgecenter/en/ssw_i5_54/rzab6/poll.htm
