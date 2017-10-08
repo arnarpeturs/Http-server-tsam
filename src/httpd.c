@@ -15,12 +15,14 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 
-#define ISTRUE 1
+#define ISTRUE 1 
 #define ISFALSE 0
 
 struct clients
 {
     struct sockaddr_in client;
+    char ip[15];
+    char port[10];
     //keep alive
 };
 typedef struct pollfd pollfd;
@@ -34,17 +36,17 @@ void debug(const char* x){
 
 //void cleanup(int nfds, pollfd *fds); TODO!!!!!!!!1
 void start_server(int *sockfd, struct sockaddr_in *server);
-void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr, int** rc);
-void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr, int** rc);
-void unsupported_request(int connfd, int** rc);
+void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
+void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr);
+void unsupported_request(int connfd);
 void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* ip_addr);
-void head_request(int connfd, int** rc);
-void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr, int* rc);
+void head_request(int connfd);
+void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
 
 int main()
 {
-    int sockfd = 0, rc, len;
-    int run_server = 1, close_conn = 0;
+    int sockfd = 0, rc;
+    int run_server = 1;
     int connfd = 0;
     int nfds = 1, current_size = 0;
     int compress_array = 0;
@@ -60,140 +62,95 @@ int main()
     fds[0].fd = sockfd;
     fds[0].events = POLLIN;
 
-    //poll!!
-    // Before the server can accept buffers, it has to listen to the
-    // welcome port. A backlog of one connection is allowed.        // We first have to accept a TCP connection, connfd is a fresh
-        // handle dedicated to this connection.
-        //client ip address
-        while(run_server == ISTRUE){
-            memset(buffer, 0, sizeof(buffer));
-            debug("server running");
-            rc = poll(fds, nfds, 30000);
-            debug("poll received");
-            if(rc < 0){
-                perror("poll failed");
-                break;
-            }
-            if(rc == 0){
-                fprintf(stdout, "%s\n", "timeout after 30 secs");
-                fflush(stdout);
-                break;
-            }
-            
-                current_size = nfds;
-                for(int i = 0; i < current_size; i++){
-                    if(fds[i].revents == 0){
-                        continue;
-                    }
-                    if(fds[i].revents != POLLIN){
-                        debug("revent error");
-                        run_server = ISFALSE;
-                        break;
-                    }
-                    if(fds[i].fd == sockfd){
-                        debug("listening socket is readable");
-
-                        while(connfd != -1){
-                            struct sockaddr_in new_client;
-                            socklen_t socklen = (socklen_t) sizeof(new_client);
-                            connfd = accept(sockfd, (struct sockaddr *)&new_client, &socklen);
-                            fprintf(stdout, "%d connfd is: \n", connfd);
-                            fflush(stdout);
-                            
-                            //TODO: búa til nýjan client í struct og setja í hashmap client[i]
-                            //connfd = accept(sockfd, NULL, NULL);
-                            if(connfd < 0){
-                                if(errno != EWOULDBLOCK){
-                                    perror("accept failed");
-                                    run_server = ISFALSE;
-                                }
-                                connfd = 0;
-                                break;
-                            }
-                            debug("new connection");
-                            client_array[i].client = new_client;
-                            fds[nfds].fd = connfd;
-                            fds[nfds].events = POLLIN;
-                            nfds++;
-                        }
-                    }
-                    else{
-                        debug("fd is readable");
-                        close_conn = ISFALSE;
-                        while(ISTRUE){
-                            rc = recv(fds[i].fd, buffer, sizeof(buffer), 0);
-                            if(rc < 0){
-                                if(errno != EWOULDBLOCK){
-                                    perror("recv failed");
-                                    close_conn = ISTRUE;
-                                }
-                                break;
-                            }
-                            if(rc == 0){
-                                debug("connection closed by client");
-                                close_conn = ISTRUE;
-                                break;
-                            }
-                            len = rc; 
-                            //TODO: lesa úr client[i] inn í breyturnar
-                                getsockname(fds[i].fd, (struct sockaddr*)&server, )
-                                fprintf(stdout, "%d fds[i] is: \n", fds[i].fd);
-                                fflush(stdout);
-                                // get info for the get request
-                                socklen_t socklen = (socklen_t) sizeof(client_array[i].client);
-                                //struct sockaddr_in* client_address = (struct sockaddr_in*)&client_array[i].client;
-                                struct in_addr client_ip = client_array[i].client.sin_addr;
-                                char host_ip[1025];
-                                char host_port[32];
-                                memset(host_port, 0, sizeof(host_port));
-                                memset(host_ip, 0, sizeof(host_ip));
-
-                                getnameinfo((struct sockaddr *)&client_array[i].client, socklen, host_ip, sizeof(host_ip), 
-                                    host_port, sizeof(host_port), NI_NUMERICHOST | NI_NUMERICSERV);
-                                
-                                char ip_addr[INET_ADDRSTRLEN];
-                                memset(ip_addr, 0, sizeof(ip_addr));
-
-                                inet_ntop(AF_INET, &client_ip, ip_addr, INET_ADDRSTRLEN);
-                                
-                                fprintf(stdout, "%s\n", ip_addr);
-                                fflush(stdout);
-
-                                client_logger(host_ip, host_port, buffer, ip_addr);
-                                request(buffer, fds[i].fd, host_ip, host_port, ip_addr, &rc);
-                                //struct sockaddr_in *ipv4 = (struct sockaddr_in *)clients_array[i].client->sin_addr;
-
-
-
-                            printf(" %d bytes recieved\n", len);
-                            //rc = send(fds[i].fd, buffer, len , 0);
-                            //printf("%d is rc lenght!! cocks !!! \n", rc);
-                            printf("%d rc value \n", rc);
-                            //TODO: input frá user getur ekki verið stærra en buffer
-                                close_conn = ISTRUE;
-                                break;
-                            
-                        }
-                        if(close_conn){
-                            close(fds[i].fd);
-                            fds[i].fd = -1;
-                            compress_array = ISTRUE;
-                        }
-                    }
-                }
-                if(compress_array){
-                    compress_array = ISFALSE;
-                    for(int i = 0; i < nfds; i++){
-                        if(fds[i].fd == -1){
-                            for(int j = i; j < nfds; j++){
-                                fds[j].fd = fds[j+1].fd;
-                            }
-                            nfds--;
-                        }
-                    }
-                }
-            
+    while(run_server == ISTRUE){
+        memset(buffer, 0, sizeof(buffer));
+        debug("server running");
+        rc = poll(fds, nfds, -1); // todo: set timeout
+        debug("poll received");
+        if(rc < 0){
+            perror("poll failed");
+            break;
         }
+        if(rc == 0){
+            fprintf(stdout, "%s\n", "timeout after 30 secs");
+            fflush(stdout);
+            //TODO: continue
+            break;
+        }
+        
+        current_size = nfds;
+
+        for(int i = 0; i < current_size; i++){
+            if(fds[i].revents == 0){
+                continue;
+            }
+            if(fds[i].revents != POLLIN){
+                debug("revent error");
+                run_server = ISFALSE;
+                break; // todo: not break
+            }
+            if(fds[i].fd == sockfd){
+                debug("listening socket is readable");
+
+                    socklen_t socklen = (socklen_t) sizeof(client_array[nfds].client);
+                    connfd = accept(sockfd, (struct sockaddr *)&client_array[nfds].client, &socklen);
+
+                    memset(client_array[nfds].ip, 0, 15);
+                    memset(client_array[nfds].port, 0, 10);
+
+                    getnameinfo((struct sockaddr *)&client_array[nfds].client, socklen, client_array[nfds].ip, 15, 
+                                    client_array[nfds].port, 10, NI_NUMERICHOST | NI_NUMERICSERV);
+                            
+                    char ip_addr[INET_ADDRSTRLEN];
+                    memset(ip_addr, 0, sizeof(ip_addr));
+
+                    inet_ntop(AF_INET, &client_array[nfds].client.sin_addr, ip_addr, INET_ADDRSTRLEN);
+
+                    debug("new connection");
+                    fds[nfds].fd = connfd;
+                    fds[nfds].events = POLLIN;
+                    nfds++;
+            }
+            else{
+                debug("fd is readable");
+                
+
+                rc = recv(fds[i].fd, buffer, sizeof(buffer), 0);
+                debug(buffer);
+                if(rc < 0){
+                    exit(1);
+                }
+                if(rc == 0){
+                    debug("connection closed by client");
+                    
+                    close(fds[i].fd);
+                    fds[i].fd = -1;
+                    compress_array = ISTRUE;
+                } 
+                else {
+                    request(buffer, fds[i].fd, client_array[i].ip, client_array[i].port, client_array[i].ip);                        
+                    client_logger(client_array[i].ip, client_array[i].port, buffer, client_array[i].ip);
+
+                    debug("ég komst í cock");
+                    close(fds[i].fd);
+                    fds[i].fd = -1;
+                    compress_array = ISTRUE;
+                }
+            }
+        }
+        if(compress_array){
+            compress_array = ISFALSE;
+            for(int i = 0; i < nfds; i++){
+                if(fds[i].fd == -1){
+                    for(int j = i; j < nfds; j++){
+                        client_array[j] = client_array[j+1];
+                        fds[j].fd = fds[j+1].fd;
+                    }
+                    nfds--;
+                }
+            }
+        }
+    }
     for(int i = 0; i < nfds; i++){
         if(fds[i].fd >= 0){
             close(fds[i].fd);
@@ -241,28 +198,31 @@ void start_server(int *sockfd, struct sockaddr_in *server){
 * What kind of request did we recieve. 
 * Calls appropriate function to generate respnse.
 */
-void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr, int* rc){
+void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr){
+        debug("request cock");
         if(buffer[0] == 'G'){
             if(buffer[5] != ' '){
-                unsupported_request(connfd, &rc);
+                debug("!cock");
+                unsupported_request(connfd);
             }
             else {
-                get_request(connfd, host_ip, host_port, ip_addr, &rc);      
+                get_request(connfd, host_ip, host_port, ip_addr);      
             }     
         }
         else if(buffer[0] == 'P'){
-            post_request(buffer, connfd, host_ip, host_port, ip_addr, &rc);
+            post_request(buffer, connfd, host_ip, host_port, ip_addr);
         }
         else if(buffer[0] == 'H'){
-            head_request(connfd, &rc);
+            head_request(connfd);
         }
         else{
-            unsupported_request(connfd, &rc);
+            debug("failed sending cock");
+            unsupported_request(connfd);
         }
 }
 
 //TODO: IMPLEMENT
-void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr, int** rc){
+void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr){
     char send_buffer[1024];
     char final_send_buffer[1024];
     memset(send_buffer, 0, sizeof(send_buffer));
@@ -270,17 +230,17 @@ void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, c
     send_buffer[0] = '\0';
     final_send_buffer[0] = '\0';
     //In memory html
-    char* prequel = "HTTP/1.1 200 OK\n"
-    "Content-type: text/html\n"
+    char* prequel = "HTTP/1.1 200 OK\r\n"
+    "Content-type: text/html\r\n"
     "content-lenght: ";
     
-    char* prequel2 = "\n"
-    "<html>\n"
-    " <body>\n"
-    "  <p>\n";
-    char* sequel = "  </p>\n"
-    " </body>\n"
-    "</html>\n";
+    char* prequel2 = "\r\n\r\n"
+    "<html>\r\n"
+    " <body>\r\n"
+    "  <p>\r\n";
+    char* sequel = "  </p>\r\n"
+    " </body>\r\n"
+    "</html>\r\n";
 
     char** split_buffer = g_strsplit(in_buffer, "\r\n\r\n", 2);
 
@@ -299,21 +259,21 @@ void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, c
     size_t content_lenght = strlen(send_buffer);
 
     strcat(final_send_buffer, prequel);
+
     sprintf(final_send_buffer + strlen(final_send_buffer), "%zu", content_lenght);
     strcat(final_send_buffer, send_buffer);
-
-    fprintf(stdout, "%s\n", final_send_buffer);
-    fflush(stdout);
-
-    **rc = send(connfd, final_send_buffer, strlen(final_send_buffer), 0);
+    debug("this is final send buffer biatch!");
+    debug(final_send_buffer);
+    debug("post cock");
+    send(connfd, final_send_buffer, strlen(final_send_buffer), 0);
 }
 
 /*
 * Generates response to request that is not GET, POST or HEAD
 */
-void unsupported_request(int connfd, int** rc){
+void unsupported_request(int connfd){
     //In memory html
-    char* drasl = "404 Not Found\n"
+    char* send_buffer = "404 Not Found\n"
     "Content-type: text/html\n"
     "\n"
     "<html>\n"
@@ -321,14 +281,14 @@ void unsupported_request(int connfd, int** rc){
     "  <h1>Not Found</h1>\n"
     " </body>\n"
     "</html>\n";
-
-    **rc = send(connfd, drasl, strlen(drasl), 0);
+    debug("unsupported cock");
+    send(connfd, send_buffer, strlen(send_buffer), 0);
 }
 
 /*
 * Generates response to GET request
 */
-void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr, int** rc) {
+void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr) {
     char send_buffer[1024];
     memset(send_buffer, 0, sizeof(send_buffer));
     //In memory html
@@ -352,13 +312,14 @@ void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr, int*
     strcat(send_buffer, host_port);
     strcat(send_buffer, sequel);
     debug(send_buffer);
-    **rc = send(connfd, send_buffer, strlen(send_buffer), 0);
+    debug("get cock");
+    send(connfd, send_buffer, strlen(send_buffer), 0);
 }
 
 /*
 * Generates response to HEAD request. 
 */
-void head_request(int connfd, int** rc){
+void head_request(int connfd){
     char head_buffer[1024];
     memset(head_buffer, 0, sizeof(head_buffer));
     time_t ltime; /* calendar time */
@@ -367,7 +328,7 @@ void head_request(int connfd, int** rc){
     char* prequel = "HTTP/1.1 200 OK\n"    
     "Connection: close\r\n"
     "Content-type: text/html \r\n"
-    "Content-length: 0"
+    "Content-length: 0\r\n"
     "Date: "; 
     char* sequel = "Location: 127.0.0.1\r\n"
     "Server: cool server\r\n";
@@ -377,8 +338,8 @@ void head_request(int connfd, int** rc){
     strcat(head_buffer, asctime(localtime(&ltime)));
     strcat(head_buffer,"\n");
     strcat(head_buffer, sequel);
-
-    **rc = send(connfd, head_buffer, strlen(head_buffer), 0);
+    debug("head cock");
+    send(connfd, head_buffer, strlen(head_buffer), 0);
 }
 
 /*
