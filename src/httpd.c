@@ -17,12 +17,14 @@
 
 #define ISTRUE 1 
 #define ISFALSE 0
+#define MAX_FDS 200
 
 struct clients
 {
     struct sockaddr_in client;
     char ip[15];
     char port[10];
+    time_t timer;
     //keep alive
 };
 typedef struct pollfd pollfd;
@@ -34,14 +36,38 @@ void debug(const char* x){
     fflush(stdout);
 }
 
-//void cleanup(int nfds, pollfd *fds); TODO!!!!!!!!1
 void start_server(int *sockfd, struct sockaddr_in *server);
-void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
-void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr);
-void unsupported_request(int connfd);
+void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr, int buffer_int);
+void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr, int buffer_int);
+void unsupported_request(int connfd, int buffer_int);
 void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* ip_addr);
-void head_request(int connfd);
-void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
+void head_request(int connfd, int buffer_int);
+void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr, int buffer_int);
+
+/*
+void print_arr(pollfd* fds) {
+    for (int i = 0; i < MAX_FDS; i++) {
+        fprintf(stdout, "%d ", fds[i].fds);
+    }
+    fprintf(stdout, "\n");
+}*/
+
+int check_time_outs(pollfd* fds, struct clients* client_array, int number_of_clients)
+{
+    int someone_timed_out = 0;
+    for (int i = 1; i < number_of_clients; i++) {
+        if (fds[i].fd != -1) {
+            time_t current = time(NULL);
+            if (difftime(current, client_array[i].timer) >= 5) { //TODO SET 30
+                debug("cunt");
+                someone_timed_out = 1;
+                close(fds[i].fd);
+                fds[i].fd = -1;
+            }
+        }
+    }
+    return someone_timed_out;
+}
 
 int main()
 {
@@ -51,13 +77,13 @@ int main()
     int nfds = 1, current_size = 0;
     int compress_array = 0;
     struct sockaddr_in server;
-    struct clients client_array[200];
+    struct clients client_array[MAX_FDS];
     char buffer[1024];
-    pollfd fds[200];
+    pollfd fds[MAX_FDS];
 
     debug("starting server");
     start_server(&sockfd, &server);
-    
+
     memset(fds, 0, sizeof(fds));
     fds[0].fd = sockfd;
     fds[0].events = POLLIN;
@@ -65,95 +91,68 @@ int main()
     while(run_server == ISTRUE){
         memset(buffer, 0, sizeof(buffer));
         debug("server running");
-        rc = poll(fds, nfds, -1); // todo: set timeout
-        debug("poll received");
-        if(rc < 0){
-            perror("poll failed");
-            break;
-        }
-        if(rc == 0){
-            fprintf(stdout, "%s\n", "timeout after 30 secs");
-            fflush(stdout);
-            //TODO: continue
-            break;
-        }
-        
-        current_size = nfds;
 
-        for(int i = 0; i < current_size; i++){
-            if(fds[i].revents == 0){
-                continue;
-            }
-            if(fds[i].revents != POLLIN){
-                debug("revent error");
-                run_server = ISFALSE;
-                break; // todo: not break
-            }
-            if(fds[i].fd == sockfd){
-                debug("listening socket is readable");
-
-                    socklen_t socklen = (socklen_t) sizeof(client_array[nfds].client);
-                    connfd = accept(sockfd, (struct sockaddr *)&client_array[nfds].client, &socklen);
-
+        rc = poll(fds, MAX_FDS, 5000);
+        debug("Poll");
+        if(rc < 0){ exit (-1);}
+        if (rc != 0) {
+            for(int i = 0; i < MAX_FDS; i++){
+                if(fds[i].fd == -1 || !(fds[i].revents & POLLIN)){
+                    continue;
+                }
+                if(i == 0){
+                    socklen_t len = (socklen_t)sizeof(struct sockaddr_in);
                     memset(client_array[nfds].ip, 0, 15);
                     memset(client_array[nfds].port, 0, 10);
 
-                    getnameinfo((struct sockaddr *)&client_array[nfds].client, socklen, client_array[nfds].ip, 15, 
-                                    client_array[nfds].port, 10, NI_NUMERICHOST | NI_NUMERICSERV);
-                            
+                    fds[nfds].fd = accept(sockfd, (struct sockaddr*)&client_array[nfds].client, &len);
+                    fds[nfds].events = POLLIN;
+
+                    client_array[nfds].timer = time(NULL);
+
+                    fprintf(stdout, "NEW CLIENT (i,fd): (%d, %d)\n", fds[nfds].fd, nfds);fflush(stdout);
+
+                    getnameinfo((struct sockaddr *)&client_array[nfds].client, len, client_array[nfds].ip, 15, 
+                    client_array[nfds].port, 10, NI_NUMERICHOST | NI_NUMERICSERV);
+        
                     char ip_addr[INET_ADDRSTRLEN];
                     memset(ip_addr, 0, sizeof(ip_addr));
 
                     inet_ntop(AF_INET, &client_array[nfds].client.sin_addr, ip_addr, INET_ADDRSTRLEN);
-
-                    debug("new connection");
-                    fds[nfds].fd = connfd;
-                    fds[nfds].events = POLLIN;
                     nfds++;
-            }
-            else{
-                debug("fd is readable");
-                
 
-                rc = recv(fds[i].fd, buffer, sizeof(buffer), 0);
-                debug(buffer);
-                if(rc < 0){
-                    exit(1);
                 }
-                if(rc == 0){
-                    debug("connection closed by client");
-                    
-                    close(fds[i].fd);
-                    fds[i].fd = -1;
-                    compress_array = ISTRUE;
-                } 
                 else {
-                    request(buffer, fds[i].fd, client_array[i].ip, client_array[i].port, client_array[i].ip);                        
-                    client_logger(client_array[i].ip, client_array[i].port, buffer, client_array[i].ip);
+                    fprintf(stdout, "Message from client (i,fd) = (%d, %d)\n", i, fds[i].fd);fflush(stdout);
 
-                    debug("ég komst í cock");
-                    close(fds[i].fd);
-                    fds[i].fd = -1;
-                    compress_array = ISTRUE;
+                    rc = recv(fds[i].fd, buffer, sizeof(buffer) -1, 0);
+
+                    if(rc == 0){
+                        close(fds[i].fd);
+                        fds[i].fd = -1;
+                        compress_array = ISTRUE;
+                    } else {
+                        // do stuff for a simgle client request
+
+                        request(buffer, fds[i].fd, client_array[i].ip, client_array[i].port, client_array[i].ip, rc);
+                        client_array[i].timer = time(NULL);
+                    }
                 }
             }
         }
+        if (check_time_outs(fds, client_array, nfds)) compress_array = ISTRUE;
         if(compress_array){
             compress_array = ISFALSE;
             for(int i = 0; i < nfds; i++){
                 if(fds[i].fd == -1){
                     for(int j = i; j < nfds; j++){
-                        client_array[j] = client_array[j+1];
+                        fprintf(stdout, "%d replacing %d\n", fds[j+1].fd, fds[j].fd);
+                        memcpy(&client_array[j+1], &client_array[j], sizeof(client_array[j]));
                         fds[j].fd = fds[j+1].fd;
                     }
                     nfds--;
                 }
             }
-        }
-    }
-    for(int i = 0; i < nfds; i++){
-        if(fds[i].fd >= 0){
-            close(fds[i].fd);
         }
     }
 }
@@ -198,134 +197,128 @@ void start_server(int *sockfd, struct sockaddr_in *server){
 * What kind of request did we recieve. 
 * Calls appropriate function to generate respnse.
 */
-void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr){
-        debug("request cock");
+void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr, int buffer_int){
+        
         if(buffer[0] == 'G'){
+            debug("buffer[0] get");
             if(buffer[5] != ' '){
-                debug("!cock");
-                unsupported_request(connfd);
+               
+                unsupported_request(connfd, buffer_int);
             }
             else {
-                get_request(connfd, host_ip, host_port, ip_addr);      
+                get_request(connfd, host_ip, host_port, ip_addr, buffer_int);      
             }     
         }
         else if(buffer[0] == 'P'){
-            post_request(buffer, connfd, host_ip, host_port, ip_addr);
+            post_request(buffer, connfd, host_ip, host_port, ip_addr, buffer_int);
         }
         else if(buffer[0] == 'H'){
-            head_request(connfd);
+
+            head_request(connfd, buffer_int);
         }
         else{
-            debug("failed sending cock");
-            unsupported_request(connfd);
+            unsupported_request(connfd, buffer_int);
         }
 }
 
 //TODO: IMPLEMENT
-void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr){
+void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr, int buffer_int){
     char send_buffer[1024];
     char final_send_buffer[1024];
     memset(send_buffer, 0, sizeof(send_buffer));
     memset(final_send_buffer, 0, sizeof(final_send_buffer));
-    send_buffer[0] = '\0';
-    final_send_buffer[0] = '\0';
-    //In memory html
-    char* prequel = "HTTP/1.1 200 OK\r\n"
-    "Content-type: text/html\r\n"
-    "content-lenght: ";
     
-    char* prequel2 = "\r\n\r\n"
-    "<html>\r\n"
-    " <body>\r\n"
-    "  <p>\r\n";
-    char* sequel = "  </p>\r\n"
-    " </body>\r\n"
-    "</html>\r\n";
-
-    char** split_buffer = g_strsplit(in_buffer, "\r\n\r\n", 2);
-
-    send_buffer[0] = '\0';
-    strcat(send_buffer, prequel2);
-    strcat(send_buffer, "http://");
-    strcat(send_buffer, ip_addr);
-    strcat(send_buffer, " ");
-    strcat(send_buffer, host_ip);
-    strcat(send_buffer, ":");
-    strcat(send_buffer, host_port);
-    strcat(send_buffer, " ");
-    strcat(send_buffer,split_buffer[1]);
-    strcat(send_buffer, sequel);
+    char** split_buffer = g_strsplit(in_buffer, "pdata=", 2);
+    strcpy(send_buffer, "HTTP/1.1 200 OK\r\nDate: Mon, 27 Jul 2009 12:28:53 GMT\r\nContent-type: text/html\r\nContent-Length: ");
     
-    size_t content_lenght = strlen(send_buffer);
+    char tmp_buffer[2000];
+    memset(tmp_buffer,0,sizeof(tmp_buffer));
+    strcpy(tmp_buffer, "<html><head><title>WebSite</title></head><body><p>");
+    strcat(tmp_buffer, "http://");
+    strcat(tmp_buffer, ip_addr);
+    strcat(tmp_buffer, " ");
+    strcat(tmp_buffer, host_ip);
+    strcat(tmp_buffer, ":");
+    strcat(tmp_buffer, host_port);
+    strcat(tmp_buffer, "</p>");
+    strcat(tmp_buffer, "<form method=\"post\">POST DATA: <input type=\"text\" name=\"pdata\"><input type=\"submit\" value=\"Submit\">");
+    strcat(tmp_buffer, split_buffer[1]);
+    strcat(tmp_buffer, "</body></html>");
 
-    strcat(final_send_buffer, prequel);
+    char len_buf[10];
+    memset(len_buf, 0, sizeof(len_buf));
+    sprintf(len_buf, "%zu", strlen(tmp_buffer));
 
-    sprintf(final_send_buffer + strlen(final_send_buffer), "%zu", content_lenght);
-    strcat(final_send_buffer, send_buffer);
-    debug("this is final send buffer biatch!");
-    debug(final_send_buffer);
-    debug("post cock");
-    send(connfd, final_send_buffer, strlen(final_send_buffer), 0);
+    strcat(send_buffer, len_buf);
+    strcat(send_buffer, "\r\n\r\n");
+    strcat(send_buffer, tmp_buffer);
+    send(connfd, send_buffer, strlen(send_buffer), 0);
 }
 
 /*
 * Generates response to request that is not GET, POST or HEAD
 */
-void unsupported_request(int connfd){
+void unsupported_request(int connfd, int buffer_int){
     //In memory html
-    char* send_buffer = "404 Not Found\n"
-    "Content-type: text/html\n"
-    "\n"
-    "<html>\n"
-    " <body>\n"
-    "  <h1>Not Found</h1>\n"
-    " </body>\n"
-    "</html>\n";
-    debug("unsupported cock");
+    char* send_buffer = "404 Not Found\r\n"
+    "Content-type: text/html\r\n"
+    "\r\n"
+    "<html>\r\n"
+    " <body>\r\n"
+    "  <h1>Not Found</h1>\r\n"
+    " </body>\r\n"
+    "</html>\r\n";
     send(connfd, send_buffer, strlen(send_buffer), 0);
 }
 
 /*
 * Generates response to GET request
 */
-void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr) {
-    char send_buffer[1024];
+void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr, int buffer_int) {
+
+    char send_buffer[10000];
     memset(send_buffer, 0, sizeof(send_buffer));
     //In memory html
-    char* prequel = "HTTP/1.1 200 OK\n"
-    "Content-type: text/html\n"
-    "\n"
-    "<html>\n"
-    " <body>\n"
-    "  <p>\n";
-    char* sequel = "  </p>\n"
-    " </body>\n"
-    "</html>\n";
 
-    send_buffer[0] = '\0';
-    strcat(send_buffer, prequel);
-    strcat(send_buffer, "http://");
-    strcat(send_buffer, ip_addr);
-    strcat(send_buffer, " ");
-    strcat(send_buffer, host_ip);
-    strcat(send_buffer, ":");
-    strcat(send_buffer, host_port);
-    strcat(send_buffer, sequel);
+    strcpy(send_buffer, "HTTP/1.1 200 OK\r\nDate: Mon, 27 Jul 2009 12:28:53 GMT\r\nContent-type: text/html\r\nContent-Length: ");
+    
+    char tmp_buffer[2000];
+    memset(tmp_buffer,0,sizeof(tmp_buffer));
+    strcpy(tmp_buffer, "<html><head><title>WebSite</title></head><body><p>");
+    strcat(tmp_buffer, "http://");
+    strcat(tmp_buffer, ip_addr);
+    strcat(tmp_buffer, " ");
+    strcat(tmp_buffer, host_ip);
+    strcat(tmp_buffer, ":");
+    strcat(tmp_buffer, host_port);
+    strcat(tmp_buffer, "</p>");
+    strcat(tmp_buffer, "<form method=\"post\">POST DATA: <input type=\"text\" name=\"pdata\"><input type=\"submit\" value=\"Submit\">");
+    strcat(tmp_buffer, "</body></html>");
+
+    char len_buf[10];
+    memset(len_buf, 0, sizeof(len_buf));
+    sprintf(len_buf, "%zu", strlen(tmp_buffer));
+
+    strcat(send_buffer, len_buf);
+    strcat(send_buffer, "\r\n\r\n");
+    strcat(send_buffer, tmp_buffer);
+
     debug(send_buffer);
-    debug("get cock");
+
     send(connfd, send_buffer, strlen(send_buffer), 0);
+
 }
 
 /*
 * Generates response to HEAD request. 
 */
-void head_request(int connfd){
+void head_request(int connfd, int buffer_int){
     char head_buffer[1024];
     memset(head_buffer, 0, sizeof(head_buffer));
     time_t ltime; /* calendar time */
     ltime=time(NULL); /* get current cal time */
     //In memory header
-    char* prequel = "HTTP/1.1 200 OK\n"    
+    char* prequel = "HTTP/1.1 200 OK\r\n"    
     "Connection: close\r\n"
     "Content-type: text/html \r\n"
     "Content-length: 0\r\n"
@@ -336,10 +329,10 @@ void head_request(int connfd){
 
     strcat(head_buffer, prequel);
     strcat(head_buffer, asctime(localtime(&ltime)));
-    strcat(head_buffer,"\n");
+    strcat(head_buffer,"\r\n");
     strcat(head_buffer, sequel);
-    debug("head cock");
     send(connfd, head_buffer, strlen(head_buffer), 0);
+
 }
 
 /*
