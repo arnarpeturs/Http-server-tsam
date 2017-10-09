@@ -19,6 +19,7 @@
 #define ISFALSE 0
 #define MAX_FDS 200
 #define KEEP_ALIVE_TIME 30
+#define PORT_NUMBER 32000
 
 struct clients
 {
@@ -140,7 +141,7 @@ void start_server(int *sockfd, struct sockaddr_in *server){
     memset(server, 0, sizeof(struct sockaddr_in));
     server->sin_family = AF_INET;
     server->sin_addr.s_addr = htonl(INADDR_ANY);
-    server->sin_port = htons(32000);
+    server->sin_port = htons(PORT_NUMBER);
     rc = bind(*sockfd, (struct sockaddr *)server, (socklen_t) sizeof(struct sockaddr_in));
     if(rc < 0){
         perror("bind failed");
@@ -193,7 +194,7 @@ void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, c
     
     char tmp_buffer[2000];
     memset(tmp_buffer,0,sizeof(tmp_buffer));
-    strcpy(tmp_buffer, "<html><head><title>WebSite</title></head><body><p>");
+    strcpy(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body><p>");
     strcat(tmp_buffer, "http://");
     strcat(tmp_buffer, ip_addr);
     strcat(tmp_buffer, "/ ");
@@ -241,7 +242,7 @@ void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr) {
     
     char tmp_buffer[1024];
     memset(tmp_buffer,0,sizeof(tmp_buffer));
-    strcpy(tmp_buffer, "<html><head><title>WebSite</title></head><body><p>");
+    strcpy(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body><p>");
     strcat(tmp_buffer, "http://");
     strcat(tmp_buffer, ip_addr);
     strcat(tmp_buffer, "/ ");
