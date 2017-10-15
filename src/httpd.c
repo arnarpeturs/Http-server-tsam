@@ -393,28 +393,48 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
     client_array[index].headers = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
     int ind = 1;
 
+    char** first_split = g_strsplit(split_buffer[0], " ", 0);
+    char** url_split = g_strsplit(first_split[1], "?", 0);
+
+    g_hash_table_insert(client_array[index].headers, "Method", g_strdup(first_split[0]));
+    g_hash_table_insert(client_array[index].headers, "Url", g_strdup(url_split[0]));
+    if (url_split[1] != NULL)
+    {
+    	g_hash_table_insert(client_array[index].headers, "Query", g_strdup(url_split[1]));
+    }
+    g_hash_table_insert(client_array[index].headers, "Version", g_strdup(first_split[2]));
+
+    g_strfreev(first_split);
+    g_strfreev(url_split);
+
     fprintf(stdout, "%s\n", buffer);
     fflush(stdout);
 
     fprintf(stdout, "%s\n", "i am the fuck the chineese master of cocks");
     fflush(stdout);
-    while(split_buffer[ind] != NULL){
-    	char ** temp_split = g_strsplit(split_buffer[ind], ": ", 0);
 
-    	/*g_hash_table_insert(client_array[index].headers, 
-    		g_strdup(temp_split[0]), g_strdup(temp_split[1]));*/
+    while(split_buffer[ind] != NULL){
+        if(g_strcmp0(split_buffer[ind], "") == 0){
+        	if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Method"), "POST") == 0){
+    			g_hash_table_insert(client_array[index].headers, "Data", g_strdup(split_buffer[ind+1]));
+        	}
+        	break;
+        }    	
+        char ** temp_split = g_strsplit(split_buffer[ind], ": ", 0);
+
+    	g_hash_table_insert(client_array[index].headers, 
+    		g_strdup(temp_split[0]), g_strdup(temp_split[1]));
     	g_strfreev(temp_split);
-    	fprintf(stdout, "%s%d\n", "cock", ind);
-    	fflush(stdout);
     	ind++;
     }
     g_strfreev(split_buffer);
-
+  
 	g_hash_table_foreach(client_array[index].headers, for_each_func, NULL);
+	exit(1);
 }
 
 void for_each_func(gpointer key, gpointer val, gpointer data)
 {
-	printf("key%s -> val%s\n", (char*)key, (char*)val);
+	printf("%s -> %s\n", (char*)key, (char*)val);
 }
 
