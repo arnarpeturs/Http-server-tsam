@@ -27,6 +27,7 @@ struct clients
     char ip[15];
     char port[10];
     time_t timer;
+    GHashTable* headers;
 };
 typedef struct pollfd pollfd;
 
@@ -39,7 +40,8 @@ void head_request(int connfd);
 void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
 int check_time_outs(pollfd* fds, struct clients* client_array, int number_of_clients);
 void compressor(pollfd* fds, struct clients* client_array, int* nfds);
-
+void for_each_func(gpointer key, gpointer val, gpointer data);
+void client_header_parser(int index, char* buffer, struct clients* client_array);
 
 
 int main()
@@ -98,7 +100,9 @@ int main()
                 }
                 else {
                     rc = recv(fds[i].fd, buffer, sizeof(buffer) -1, 0);
-                    //client has closed connection
+                    
+                    client_header_parser(i, buffer, client_array);
+
                     if(rc == 0){
                         close(fds[i].fd);
                         fds[i].fd = -1;
@@ -384,3 +388,33 @@ int check_time_outs(pollfd* fds, struct clients* client_array, int number_of_cli
     }
     return someone_timed_out;
 }
+void client_header_parser(int index, char* buffer, struct clients* client_array){
+    char** split_buffer = g_strsplit(buffer, "\r\n", 0);
+    client_array[index].headers = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+    int ind = 1;
+
+    fprintf(stdout, "%s\n", buffer);
+    fflush(stdout);
+
+    fprintf(stdout, "%s\n", "i am the fuck the chineese master of cocks");
+    fflush(stdout);
+    while(split_buffer[ind] != NULL){
+    	char ** temp_split = g_strsplit(split_buffer[ind], ": ", 0);
+
+    	/*g_hash_table_insert(client_array[index].headers, 
+    		g_strdup(temp_split[0]), g_strdup(temp_split[1]));*/
+    	g_strfreev(temp_split);
+    	fprintf(stdout, "%s%d\n", "cock", ind);
+    	fflush(stdout);
+    	ind++;
+    }
+    g_strfreev(split_buffer);
+
+	g_hash_table_foreach(client_array[index].headers, for_each_func, NULL);
+}
+
+void for_each_func(gpointer key, gpointer val, gpointer data)
+{
+	printf("key%s -> val%s\n", (char*)key, (char*)val);
+}
+

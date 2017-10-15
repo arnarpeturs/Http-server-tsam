@@ -15,9 +15,10 @@ Http server for a networking class in Reykjavík University
 Getting started has never been so easy
 Just go to the extract the zip file and go to the directory in bash/shell and do the following:
 
-1. make -C ./src
+1. Make -C ./src
 2. ./src/httpd
-3. Enjoy your nifty little http server
+
+Then you can go to your browser and simply enter http://127.0.0.1:32000 or http://localhost:3200
 
 ### Prerequisites
 
