@@ -31,10 +31,11 @@ struct clients
 };
 typedef struct pollfd pollfd;
 
-void start_server(int *sockfd, struct sockaddr_in *server);
+void start_server(int *sockfd, struct sockaddr_in *server, unsigned short port_number);
 void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
 void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr);
 void unsupported_request(int connfd);
+void not_implemented(int connfd);
 void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* ip_addr);
 void head_request(int connfd);
 void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
@@ -44,8 +45,9 @@ void for_each_func(gpointer key, gpointer val, gpointer data);
 void client_header_parser(int index, char* buffer, struct clients* client_array);
 
 
-int main()
+int main(int argc, char** argv)
 {
+    unsigned short port_number = atoi(argv[1]);
     int sockfd = 0, rc;
     int run_server = 1;
     int nfds = 1;
@@ -57,7 +59,7 @@ int main()
     char server_ip[15];
     memset(server_ip, 0, sizeof(server_ip));
 
-    start_server(&sockfd, &server);
+    start_server(&sockfd, &server, port_number);
 
     inet_ntop(AF_INET, &server.sin_addr, server_ip, INET_ADDRSTRLEN);
     
@@ -101,7 +103,7 @@ int main()
                 else {
                     rc = recv(fds[i].fd, buffer, sizeof(buffer) -1, 0);
                     
-                    client_header_parser(i, buffer, client_array);
+                    //client_header_parser(i, buffer, client_array);
 
                     if(rc == 0){
                         close(fds[i].fd);
@@ -135,7 +137,7 @@ int main()
     }
 }
 
-void start_server(int *sockfd, struct sockaddr_in *server){
+void start_server(int *sockfd, struct sockaddr_in *server, unsigned short port_number){
     int rc;
     *sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(*sockfd < 0){
@@ -145,7 +147,7 @@ void start_server(int *sockfd, struct sockaddr_in *server){
     memset(server, 0, sizeof(struct sockaddr_in));
     server->sin_family = AF_INET;
     server->sin_addr.s_addr = htonl(INADDR_ANY);
-    server->sin_port = htons(PORT_NUMBER);
+    server->sin_port = htons(port_number);
     rc = bind(*sockfd, (struct sockaddr *)server, (socklen_t) sizeof(struct sockaddr_in));
     if(rc < 0){
         perror("bind failed");
@@ -162,8 +164,43 @@ void start_server(int *sockfd, struct sockaddr_in *server){
 * Calls appropriate function to generate response.
 */
 void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr){
-        
-    if(buffer[0] == 'G'){
+    
+    //TODO: Breyta unsupported
+    char** split_buffer = g_strsplit(buffer, " ", 2);
+    if(g_strcmp0(split_buffer[0], "GET") == 0){
+        if(buffer[5] != ' '){
+            unsupported_request(connfd);
+        }
+        else {
+            get_request(connfd, host_ip, host_port, ip_addr);   
+        }    
+    }
+    else if(g_strcmp0(split_buffer[0], "HEAD") == 0){
+        head_request(connfd);
+    }
+    else if(g_strcmp0(split_buffer[0], "POST") == 0){
+        post_request(buffer, connfd, host_ip, host_port, ip_addr);
+    }
+    else if(g_strcmp0(split_buffer[0], "PUT") == 0){
+        unsupported_request(connfd);
+    }
+    else if(g_strcmp0(split_buffer[0], "DELETE") == 0){
+        unsupported_request(connfd);
+    }
+    else if(g_strcmp0(split_buffer[0], "CONNECT") == 0) {
+        unsupported_request(connfd);
+    }
+    else if(g_strcmp0(split_buffer[0], "OPTIONS") == 0){
+        unsupported_request(connfd);
+    }
+    else if(g_strcmp0(split_buffer[0], "TRACE") == 0){
+        unsupported_request(connfd);
+    }
+    else {
+        unsupported_request(connfd);
+    }
+    /*
+    if(buffer[0] == 'G' && buffer[1] == 'E' && buffer[2] == 'T'){
         if(buffer[5] != ' '){
             unsupported_request(connfd);
         }
@@ -171,15 +208,15 @@ void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_
             get_request(connfd, host_ip, host_port, ip_addr);      
         }     
     }
-    else if(buffer[0] == 'P'){
+    else if(buffer[0] == 'P' && buffer[1] == 'O' && buffer[2] == 'S' && buffer[3] == 'T'){
         post_request(buffer, connfd, host_ip, host_port, ip_addr);
     }
-    else if(buffer[0] == 'H'){
+    else if(buffer[0] == 'H' && buffer[1] == 'E' && buffer[2] == 'A' && buffer[3] == 'D'){
         head_request(connfd);
     }
     else{
         unsupported_request(connfd);
-    }
+    }*/
 }
 
 void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr){
@@ -430,7 +467,7 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
     g_strfreev(split_buffer);
   
 	g_hash_table_foreach(client_array[index].headers, for_each_func, NULL);
-	exit(1);
+	//exit(1);
 }
 
 void for_each_func(gpointer key, gpointer val, gpointer data)
