@@ -31,6 +31,11 @@ struct clients
 };
 typedef struct pollfd pollfd;
 
+void debug(char* buffer){
+    fprintf(stdout, "%s\n", buffer);
+    fflush(stdout);
+}
+
 void start_server(int *sockfd, struct sockaddr_in *server, unsigned short port_number);
 void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
 void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr);
@@ -102,8 +107,7 @@ int main(int argc, char** argv)
                 }
                 else {
                     rc = recv(fds[i].fd, buffer, sizeof(buffer) -1, 0);
-                    
-                    //client_header_parser(i, buffer, client_array);
+                    debug(buffer);
 
                     if(rc == 0){
                         close(fds[i].fd);
@@ -111,10 +115,11 @@ int main(int argc, char** argv)
                         compress_array = ISTRUE;
                     } 
                     else {
+                        client_header_parser(i, buffer, client_array);
                         //Reads the request type from buffer and sends appropriate response
                         request(buffer, fds[i].fd, client_array[i].ip, client_array[i].port, server_ip);
                         client_logger(client_array[i].ip, client_array[i].port, buffer, server_ip);
-                        
+                        debug("server2");
                         //checks for keep-alive
                         if(strstr(buffer, "HTTP/1.0") || strstr(buffer, "Connection: close")){
                             close(fds[i].fd);
@@ -199,6 +204,7 @@ void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_
     else {
         unsupported_request(connfd);
     }
+    g_strfreev(split_buffer);
     /*
     if(buffer[0] == 'G' && buffer[1] == 'E' && buffer[2] == 'T'){
         if(buffer[5] != ' '){
@@ -224,15 +230,17 @@ void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, c
     char final_send_buffer[1024];
     memset(send_buffer, 0, sizeof(send_buffer));
     memset(final_send_buffer, 0, sizeof(final_send_buffer));
-    
+
     time_t ltime; /* calendar time */
     ltime=time(NULL); /* get current cal time */
 
-    char** split_buffer = g_strsplit(in_buffer, "pdata=", 2);
+    char** split_buffer = g_strsplit(in_buffer, "data=", 2);
     strcpy(send_buffer, "HTTP/1.1 200 OK\r\nDate: ");
     strcat(send_buffer, asctime(localtime(&ltime)));
     strcat(send_buffer,"Content-type: text/html\r\nContent-Length: ");
+
     
+
     char tmp_buffer[2000];
     memset(tmp_buffer,0,sizeof(tmp_buffer));
     strcpy(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body><p>");
@@ -244,7 +252,7 @@ void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, c
     strcat(tmp_buffer, host_port);
     strcat(tmp_buffer, "</p>");
     strcat(tmp_buffer, "<form method=\"post\">POST DATA: <input type=\"text\" name=\"pdata\"><input type=\"submit\" value=\"Submit\">");
-    strcat(tmp_buffer, split_buffer[1]);
+    strcat(tmp_buffer, split_buffer[0]);
     strcat(tmp_buffer, "</body></html>");
 
     char len_buf[10];
@@ -452,21 +460,33 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
 
     while(split_buffer[ind] != NULL){
         if(g_strcmp0(split_buffer[ind], "") == 0){
+            debug("1");
         	if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Method"), "POST") == 0){
+                debug("2");
     			g_hash_table_insert(client_array[index].headers, "Data", g_strdup(split_buffer[ind+1]));
+                debug("3");
         	}
+            debug("4");
         	break;
         }    	
         char ** temp_split = g_strsplit(split_buffer[ind], ": ", 0);
-
+debug("5");
     	g_hash_table_insert(client_array[index].headers, 
     		g_strdup(temp_split[0]), g_strdup(temp_split[1]));
     	g_strfreev(temp_split);
+        debug("6");
     	ind++;
+    }
+    if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Connection"), "keep-alive") == 0){        
+        g_hash_table_insert(client_array[index].headers,"Keep-alive", "timeout=30");
+    }
+    if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Connection"), "close") == 0){        
+        g_hash_table_insert(client_array[index].headers,"close", "timeout=30");
     }
     g_strfreev(split_buffer);
   
 	g_hash_table_foreach(client_array[index].headers, for_each_func, NULL);
+    debug("7");
 	//exit(1);
 }
 
