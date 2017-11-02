@@ -37,13 +37,12 @@ void debug(char* buffer){
 }
 
 void start_server(int *sockfd, struct sockaddr_in *server, unsigned short port_number);
-void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr);
-void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr, struct clients* client_array, int temp_index);
-void unsupported_request(int connfd);
+void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* client_array, int index);
+void get_request(int connfd, char* ip_addr, struct clients* client_array, int index);
 void not_implemented(int connfd);
 void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* ip_addr);
 void head_request(int connfd);
-void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr, struct clients* client_array, int temp_index);
+void request(char* buffer, int connfd, char* ip_addr, struct clients* client_array, int index);
 int check_time_outs(pollfd* fds, struct clients* client_array, int number_of_clients);
 void compressor(pollfd* fds, struct clients* client_array, int* nfds);
 void for_each_func(gpointer key, gpointer val, gpointer data);
@@ -78,7 +77,7 @@ int main(int argc, char** argv)
 
         rc = poll(fds, MAX_FDS, KEEP_ALIVE_TIME);
 
-        if(rc < 0){ exit (-1);}
+        if(rc < 0){ debug("1"); exit (-1);}
         if (rc != 0) {
             for(int i = 0; i < MAX_FDS; i++){
                 if(fds[i].fd == -1 || !(fds[i].revents & POLLIN)){
@@ -116,7 +115,7 @@ int main(int argc, char** argv)
                     else {
                         client_header_parser(i, buffer, client_array);
                         //Reads the request type from buffer and sends appropriate response
-                        request(buffer, fds[i].fd, client_array[i].ip, client_array[i].port, server_ip, client_array, i);
+                        request(buffer, fds[i].fd, server_ip, client_array, i);
                         client_logger(client_array[i].ip, client_array[i].port, buffer, server_ip);
                         //checks for keep-alive
                         if(strstr(buffer, "HTTP/1.0") || strstr(buffer, "Connection: close")){
@@ -166,116 +165,160 @@ void start_server(int *sockfd, struct sockaddr_in *server, unsigned short port_n
 * What kind of request did we recieve. 
 * Calls appropriate function to generate response.
 */
-void request(char* buffer, int connfd, char* host_ip, char* host_port, char* ip_addr, struct clients* client_array, int temp_index){
+void request(char* buffer, int connfd, char* ip_addr, struct clients* client_array, int index){
     
     //TODO: Breyta unsupported
     char** split_buffer = g_strsplit(buffer, " ", 2);
     if(g_strcmp0(split_buffer[0], "GET") == 0){
         if(buffer[5] != ' '){
-            unsupported_request(connfd);
+            not_implemented(connfd);
         }
         else {
-            get_request(connfd, host_ip, host_port, ip_addr, client_array, temp_index);   
+            get_request(connfd, ip_addr, client_array, index);   
         }    
     }
     else if(g_strcmp0(split_buffer[0], "HEAD") == 0){
         head_request(connfd);
     }
     else if(g_strcmp0(split_buffer[0], "POST") == 0){
-        post_request(buffer, connfd, host_ip, host_port, ip_addr);
+        post_request(buffer, connfd, ip_addr, client_array, index);
     }
     else if(g_strcmp0(split_buffer[0], "PUT") == 0){
-        unsupported_request(connfd);
+        not_implemented(connfd);
     }
     else if(g_strcmp0(split_buffer[0], "DELETE") == 0){
-        unsupported_request(connfd);
+        not_implemented(connfd);
     }
     else if(g_strcmp0(split_buffer[0], "CONNECT") == 0) {
-        unsupported_request(connfd);
+        not_implemented(connfd);
     }
     else if(g_strcmp0(split_buffer[0], "OPTIONS") == 0){
-        unsupported_request(connfd);
+        not_implemented(connfd);
     }
     else if(g_strcmp0(split_buffer[0], "TRACE") == 0){
-        unsupported_request(connfd);
+        not_implemented(connfd);
     }
     else {
-        unsupported_request(connfd);
+        not_implemented(connfd);
     }
     g_strfreev(split_buffer);
-    /*
-    if(buffer[0] == 'G' && buffer[1] == 'E' && buffer[2] == 'T'){
-        if(buffer[5] != ' '){
-            unsupported_request(connfd);
-        }
-        else {
-            get_request(connfd, host_ip, host_port, ip_addr);      
-        }     
-    }
-    else if(buffer[0] == 'P' && buffer[1] == 'O' && buffer[2] == 'S' && buffer[3] == 'T'){
-        post_request(buffer, connfd, host_ip, host_port, ip_addr);
-    }
-    else if(buffer[0] == 'H' && buffer[1] == 'E' && buffer[2] == 'A' && buffer[3] == 'D'){
-        head_request(connfd);
-    }
-    else{
-        unsupported_request(connfd);
-    }*/
 }
+/*
+void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* client_array, int index){
+    GString *send_buffer = g_string_new("");
+    time_t ltime; 
+    ltime=time(NULL); 
 
-void post_request(char* in_buffer, int connfd, char* host_ip, char* host_port, char* ip_addr){
+    //char** split_buffer = g_strsplit(in_buffer, "data=", 2);
+    
+    g_string_append(send_buffer,"HTTP/1.1 200 OK\r\nDate: ");
+    g_string_append(send_buffer, asctime(localtime(&ltime)));
+    
+    if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Connection"), "keep-alive") == 0){
+        g_string_append(send_buffer, "Connection: keep-alive\r\n");
+    }   
+    else{
+        g_string_append(send_buffer, "Connection: close\r\n");
+    }
+    g_string_append(send_buffer,"Content-type: text/html\r\nContent-Length: ");
+
+    GString *tmp_buffer = g_string_new("");
+    g_string_append(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body><p>");
+    g_string_append(tmp_buffer, "http://");
+    g_string_append(tmp_buffer, ip_addr);
+    g_string_append(tmp_buffer, "/ ");
+    g_string_append(tmp_buffer, client_array[index].ip);
+    g_string_append(tmp_buffer, ":");
+    g_string_append(tmp_buffer, client_array[index].port);
+    g_string_append(tmp_buffer, "</p>");
+    g_string_append(tmp_buffer, "<form method=\"post\">POST DATA: <input type=\"text\" name=\"pdata\"><input type=\"submit\" value=\"Submit\">");
+    g_string_append(tmp_buffer, g_hash_table_lookup(client_array[index].headers, "Data"));
+    g_string_append(tmp_buffer, "</body></html>");
+
+    int len = g_strv_length(tmp_buffer);
+    GString *len_buf = g_strdup_printf("%i", len);
+    
+
+    g_string_append(send_buffer, len_buf);
+    g_string_append(send_buffer, "\r\n\r\n");
+    g_string_append(send_buffer, tmp_buffer);
+    send(connfd, send_buffer, strlen(send_buffer), 0);
+    g_string_free(send_buffer, TRUE);
+    g_string_free(tmp_buffer, TRUE);
+    g_string_free(len_buf, TRUE);
+}*/
+
+void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* client_array, int index){
     char send_buffer[1024];
     char final_send_buffer[1024];
     memset(send_buffer, 0, sizeof(send_buffer));
     memset(final_send_buffer, 0, sizeof(final_send_buffer));
 
-    time_t ltime; /* calendar time */
-    ltime=time(NULL); /* get current cal time */
+    time_t ltime; 
+    ltime=time(NULL); 
 
-    char** split_buffer = g_strsplit(in_buffer, "data=", 2);
+
+
+    char** split_buffer = g_strsplit(in_buffer, "\r\n\r\n", 0);
+
     strcpy(send_buffer, "HTTP/1.1 200 OK\r\nDate: ");
     strcat(send_buffer, asctime(localtime(&ltime)));
+
+    if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Connection"), "keep-alive") == 0){
+        strcat(send_buffer, "Connection: keep-alive\r\n");
+    }   
+    else{
+        strcat(send_buffer, "Connection: close\r\n");
+    }
     strcat(send_buffer,"Content-type: text/html\r\nContent-Length: ");
-
-
-
     char tmp_buffer[2000];
     memset(tmp_buffer,0,sizeof(tmp_buffer));
     strcpy(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body><p>");
     strcat(tmp_buffer, "http://");
     strcat(tmp_buffer, ip_addr);
     strcat(tmp_buffer, "/ ");
-    strcat(tmp_buffer, host_ip);
+    strcat(tmp_buffer, client_array[index].ip);
     strcat(tmp_buffer, ":");
-    strcat(tmp_buffer, host_port);
+    strcat(tmp_buffer, client_array[index].port);
     strcat(tmp_buffer, "</p>");
     strcat(tmp_buffer, "<form method=\"post\">POST DATA: <input type=\"text\" name=\"pdata\"><input type=\"submit\" value=\"Submit\">");
-    strcat(tmp_buffer, split_buffer[0]);
+    if(g_str_has_prefix(split_buffer[1], "pdata=")== TRUE){
+        char** splitty = g_strsplit(split_buffer[1], "pdata=", 0);
+        strcat(tmp_buffer, splitty[1]);
+        g_strfreev(splitty);
+    }
+    else{
+        debug("anus3");
+        strcat(tmp_buffer, split_buffer[1]);    
+    }
+    
+    debug("anus69");
     strcat(tmp_buffer, "</body></html>");
 
     char len_buf[10];
     memset(len_buf, 0, sizeof(len_buf));
     sprintf(len_buf, "%zu", strlen(tmp_buffer));
-
+    debug("anus4");
     strcat(send_buffer, len_buf);
     strcat(send_buffer, "\r\n\r\n");
     strcat(send_buffer, tmp_buffer);
     send(connfd, send_buffer, strlen(send_buffer), 0);
+    debug("anus5");
     g_strfreev(split_buffer);
 }
 
 /*
 * Generates response to request that is not GET, POST or HEAD
 */
-void unsupported_request(int connfd){
-    char* send_buffer = "HTTP/1.1 404 Not Found\r\nContent-type: text/html\r\nContent-Length: 94\r\n\r\n<!DOCTYPE html><html><head><title>404</title></head><body><h1>404 Not Found</h1></body></html>";
+void not_implemented(int connfd){
+    char* send_buffer = "HTTP/1.1 501 Not implemented\r\nContent-type: text/html\r\nContent-Length: 100\r\n\r\n<!DOCTYPE html><html><head><title>501</title></head><body><h1>501 Not implemented</h1></body></html>";
     send(connfd, send_buffer, strlen(send_buffer), 0);
 }
 
 /*
 * Generates response to GET request
 */
-void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr, struct clients* client_array, int temp_index) {
+void get_request(int connfd, char* ip_addr, struct clients* client_array, int index) {
 
     char send_buffer[1024];
     memset(send_buffer, 0, sizeof(send_buffer));
@@ -285,9 +328,9 @@ void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr, stru
 
     strcpy(send_buffer, "HTTP/1.1 200 OK\r\nDate: ");
     strcat(send_buffer, asctime(localtime(&ltime)));
-    if(g_strcmp0(g_hash_table_lookup(client_array[temp_index].headers, "Connection"), "keep-alive") == 0){
+    if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Connection"), "keep-alive") == 0){
         strcat(send_buffer, "Connection: keep-alive\r\n");
-    }
+    }   
     else{
         strcat(send_buffer, "Connection: close\r\n");
     }
@@ -299,17 +342,16 @@ void get_request(int connfd, char* host_ip, char* host_port, char* ip_addr, stru
     strcat(tmp_buffer, "http://");
     strcat(tmp_buffer, ip_addr);
     strcat(tmp_buffer, "/ ");
-    strcat(tmp_buffer, host_ip);
+    strcat(tmp_buffer, client_array[index].ip);
     strcat(tmp_buffer, ":");
-    strcat(tmp_buffer, host_port);
+    strcat(tmp_buffer, client_array[index].port);
     strcat(tmp_buffer, "</p>");
     strcat(tmp_buffer, "<form method=\"post\">POST DATA: <input type=\"text\" name=\"pdata\"><input type=\"submit\" value=\"Submit\">");
-    strcat(tmp_buffer, "</body></html>");
+    strcat(tmp_buffer, "</body></html>");   
 
     char len_buf[10];
     memset(len_buf, 0, sizeof(len_buf));
     sprintf(len_buf, "%zu", strlen(tmp_buffer));
-
     strcat(send_buffer, len_buf);
     strcat(send_buffer, "\r\n\r\n");
     strcat(send_buffer, tmp_buffer);
@@ -329,7 +371,7 @@ void head_request(int connfd){
     char* prequel = "HTTP/1.1 200 OK\r\n"    
     "Connection: close\r\n"
     "Content-type: text/html \r\n"
-    "Content-length: 0\r\n"
+    "Content-length: 213\r\n"
     "Date: "; 
     char* sequel = "Location: 127.0.0.1\r\n"
     "Server: cool server\r\n";
@@ -356,6 +398,7 @@ void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* i
     if(fptr == NULL)
     {
       printf("Error!");
+      debug("2");
       exit(1);
     }
     time_t ltime; /* calendar time */
@@ -381,7 +424,7 @@ void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* i
     }
     else{
         request_method = "ERROR";
-        response_code = "400 Not Found";
+        response_code = "501 Not implemented";
     }
 
     char** split_buffer = g_strsplit(in_buffer, " ", 3);
