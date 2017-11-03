@@ -43,7 +43,7 @@ void start_server(int *sockfd, struct sockaddr_in *server, unsigned short port_n
 void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* client_array, int index);
 void get_request(int connfd, char* ip_addr, struct clients* client_array, int index);
 void not_implemented(int connfd);
-void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* ip_addr);
+void client_logger(char in_buffer[1024], struct clients* client_array, int index);
 void head_request(int connfd);
 void request(char* buffer, int connfd, char* ip_addr, struct clients* client_array, int index);
 int check_time_outs(pollfd* fds, struct clients* client_array, int number_of_clients);
@@ -130,8 +130,9 @@ int main(int argc, char** argv)
                     else {
                         client_header_parser(i, buffer, client_array);
                         //Reads the request type from buffer and sends appropriate response
+    
                         request(buffer, fds[i].fd, server_ip, client_array, i);
-                        client_logger(client_array[i].ip, client_array[i].port, buffer, server_ip);
+                        client_logger(buffer, client_array, i);
                         //checks for keep-alive
                         if(strstr(buffer, "HTTP/1.0") || strstr(buffer, "Connection: close")){
                             debug("CLOSING CLIENT");
@@ -310,11 +311,9 @@ void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* cl
         g_strfreev(splitty);
     }
     else{
-        debug("anus3");
         strcat(tmp_buffer, split_buffer[1]);    
     }
     
-    debug("anus69");
     strcat(tmp_buffer, "</body></html>");
 
     char len_buf[10];
@@ -376,8 +375,9 @@ void get_request(int connfd, char* ip_addr, struct clients* client_array, int in
     }
     strcat(tmp_buffer, "><p>");
     strcat(tmp_buffer, "http://");
-    strcat(tmp_buffer, ip_addr);
-    strcat(tmp_buffer, "/ ");
+    strcat(tmp_buffer, g_hash_table_lookup(client_array[index].headers, "Host"));
+    strcat(tmp_buffer, g_hash_table_lookup(client_array[index].headers, "Url"));
+    strcat(tmp_buffer, " ");
     strcat(tmp_buffer, client_array[index].ip);
     strcat(tmp_buffer, ":");
     strcat(tmp_buffer, client_array[index].port);
@@ -410,7 +410,7 @@ void head_request(int connfd){
     "Content-length: 213\r\n"
     "Date: "; 
     char* sequel = "Location: 127.0.0.1\r\n"
-    "Server: cool server\r\n";
+    "Server: cool server 2.0\r\n";
 
     strcat(head_buffer, prequel);
     strcat(head_buffer, asctime(localtime(&ltime)));
@@ -423,7 +423,7 @@ void head_request(int connfd){
 /*
 * Logs information from client
 */
-void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* ip_addr){
+void client_logger(char in_buffer[1024], struct clients* client_array, int index){
     char to_file_buffer[1000];
     char* request_method;
     char* response_code;
@@ -434,7 +434,6 @@ void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* i
     if(fptr == NULL)
     {
       printf("Error!");
-      debug("2");
       exit(1);
     }
     time_t ltime; /* calendar time */
@@ -462,25 +461,23 @@ void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* i
         request_method = "ERROR";
         response_code = "501 Not implemented";
     }
-
-    char** split_buffer = g_strsplit(in_buffer, " ", 3);
     
     strcat(to_file_buffer, asctime(localtime(&ltime)));
     strcat(to_file_buffer, " : ");
-    strcat(to_file_buffer, host_ip);
+    strcat(to_file_buffer, client_array[index].ip);
     strcat(to_file_buffer, ":");
-    strcat(to_file_buffer, host_port);
+    strcat(to_file_buffer, client_array[index].port);
     strcat(to_file_buffer, " ");
     strcat(to_file_buffer, request_method);
     strcat(to_file_buffer, " ");
-    strcat(to_file_buffer, ip_addr);
-    strcat(to_file_buffer, split_buffer[1]);
+    strcat(to_file_buffer, "http://");
+    strcat(to_file_buffer, g_hash_table_lookup(client_array[index].headers, "Host"));
+    strcat(to_file_buffer, g_hash_table_lookup(client_array[index].headers, "Url"));
     strcat(to_file_buffer, " : ");
     strcat(to_file_buffer, response_code);
 
     fprintf(fptr,"\r\n%s", to_file_buffer);
     fclose(fptr);
-    g_strfreev(split_buffer);
 }
 /*
 * If a client closes connection it minimizes the client and fds arrays to the number of clients connected
@@ -589,7 +586,7 @@ void add_queries_to_html(gpointer key, gpointer val, gpointer data){
     strcat(str, (char*)key);
     strcat(str, " --> ");
     strcat(str, (char*)val);
-    strcat(str, "</p><br>");
+    strcat(str, "</p>");
 }
 
 void color_page(int connfd, struct clients* client_array, int index) {
