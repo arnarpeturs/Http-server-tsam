@@ -535,3 +535,19 @@ Fri Nov  3 15:55:32 2017
  : 127.0.0.1:3972 ERROR 0.0.0.0/color?bg=red : 404 Not Found
 Fri Nov  3 15:55:33 2017
  : 127.0.0.1:3972 ERROR 0.0.0.0/favicon.ico : 404 Not Found
+Fri Nov  3 16:58:04 2017
+ : 127.0.0.1:9313 ERROR 0.0.0.0/color?bg=red : 404 Not Found
+Fri Nov  3 16:58:05 2017
+ : 127.0.0.1:9313 ERROR 0.0.0.0/favicon.ico : 404 Not Found
+Fri Nov  3 17:10:25 2017
+ : 127.0.0.1:10361 GET 0.0.0.0/ : 200 OK
+Fri Nov  3 17:10:26 2017
+ : 127.0.0.1:10361 ERROR 0.0.0.0/favicon.ico : 404 Not Found
+Fri Nov  3 17:34:19 2017
+ : 127.0.0.1:12329 ERROR 0.0.0.0/test : 404 Not Found
+Fri Nov  3 17:34:20 2017
+ : 127.0.0.1:12329 ERROR 0.0.0.0/favicon.ico : 404 Not Found
+Fri Nov  3 17:34:34 2017
+ : 127.0.0.1:12329 ERROR 0.0.0.0/test?cock=pussy : 404 Not Found
+Fri Nov  3 17:34:34 2017
+ : 127.0.0.1:12329 ERROR 0.0.0.0/favicon.ico : 404 Not Found

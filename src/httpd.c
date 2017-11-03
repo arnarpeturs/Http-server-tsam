@@ -19,7 +19,8 @@
 #define ISFALSE 0
 #define MAX_FDS 200
 #define KEEP_ALIVE_TIME 30
-#define PORT_NUMBER 32000
+#define MAX_PORT 65535
+#define MIN_PORT 1024
 
 struct clients
 {
@@ -50,10 +51,18 @@ void compressor(pollfd* fds, struct clients* client_array, int* nfds);
 void for_each_func(gpointer key, gpointer val, gpointer data);
 void client_header_parser(int index, char* buffer, struct clients* client_array);
 void color_page(int connfd, struct clients* client_array, int index);
+unsigned short get_port(const char* port);
+int is_numeric(const char* port, size_t len);
+void add_queries_to_html(gpointer key, gpointer val, gpointer data);
+void test_page(int connfd, struct clients* client_array, int index);
 
 int main(int argc, char** argv)
 {
-    unsigned short port_number = atoi(argv[1]);
+    if(argc != 2){
+        perror("Invalid arguments");
+        exit(-1);
+    }
+    unsigned short port_number = get_port(argv[1]);
     int sockfd = 0, rc;
     int run_server = 1;
     int nfds = 1;
@@ -179,7 +188,10 @@ void request(char* buffer, int connfd, char* ip_addr, struct clients* client_arr
     if(g_strcmp0(split_buffer[0], "GET") == 0){
         if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Url"), "/color") == 0){
             color_page(connfd, client_array, index);
-        } 
+        }
+        else if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Url"), "/test") == 0){
+            test_page(connfd, client_array, index);
+        }
         else if(buffer[5] != ' '){
             not_implemented(connfd);
         }
@@ -571,6 +583,15 @@ void for_each_func(gpointer key, gpointer val, gpointer data)
 	printf("%s -> %s\n", (char*)key, (char*)val);
 }
 
+void add_queries_to_html(gpointer key, gpointer val, gpointer data){
+    char* str = (char*)data;
+    strcat(str, "<p>");
+    strcat(str, (char*)key);
+    strcat(str, " --> ");
+    strcat(str, (char*)val);
+    strcat(str, "</p><br>");
+}
+
 void color_page(int connfd, struct clients* client_array, int index) {
 
     char send_buffer[1024];
@@ -607,6 +628,63 @@ void color_page(int connfd, struct clients* client_array, int index) {
         strcat(tmp_buffer, "\">");
     }
    
+    strcat(tmp_buffer, "</body></html>");   
+
+    char len_buf[10];
+    memset(len_buf, 0, sizeof(len_buf));
+    sprintf(len_buf, "%zu", strlen(tmp_buffer));
+    strcat(send_buffer, len_buf);
+    strcat(send_buffer, "\r\n\r\n");
+    strcat(send_buffer, tmp_buffer);
+    debug(send_buffer);
+    send(connfd, send_buffer, strlen(send_buffer), 0);
+}
+
+unsigned short get_port(const char* port){
+    size_t len = 0;
+    if((len = strlen(port)) > 5 || !is_numeric(port, len)){
+        exit(1);
+    }
+    int temp_port = atoi(port);
+    if(temp_port <= MIN_PORT || temp_port > MAX_PORT){
+        printf("%s\n", "ILLEGAL PORT_NUMBER");
+        exit(1);
+    }
+    return (unsigned short)temp_port;
+}
+int is_numeric(const char* port, size_t len){
+    for(unsigned int i = 0; i < len; i++){
+        if(port[i] > 57 || port[i] < 48){
+            return 0;
+        }
+    }
+    return 1;
+}
+
+void test_page(int connfd, struct clients* client_array, int index) {
+
+    char send_buffer[1024];
+    memset(send_buffer, 0, sizeof(send_buffer));
+
+    time_t ltime; /* calendar time */
+    ltime=time(NULL); /* get current cal time */
+
+    strcpy(send_buffer, "HTTP/1.1 200 OK\r\nDate: ");
+    strcat(send_buffer, asctime(localtime(&ltime)));
+    if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Connection"), "keep-alive") == 0){
+        strcat(send_buffer, "Connection: keep-alive\r\n");
+    }   
+    else{
+        strcat(send_buffer, "Connection: close\r\n");
+    }
+    strcat(send_buffer,"Content-type: text/html\r\nContent-Length: ");
+    
+    char tmp_buffer[1024];
+    memset(tmp_buffer, 0, sizeof(tmp_buffer));
+    strcat(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body>");
+
+    g_hash_table_foreach(client_array[index].queries, add_queries_to_html, tmp_buffer);
+
     strcat(tmp_buffer, "</body></html>");   
 
     char len_buf[10];
