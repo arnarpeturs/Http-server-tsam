@@ -505,6 +505,8 @@ int check_time_outs(pollfd* fds, struct clients* client_array, int number_of_cli
         if (fds[i].fd != -1) {
             time_t current = time(NULL);
             if (difftime(current, client_array[i].timer) >= KEEP_ALIVE_TIME) {
+                g_hash_table_destroy(client_array[i].queries);
+                g_hash_table_destroy(client_array[i].headers);
                 someone_timed_out = 1;
                 close(fds[i].fd);
                 fds[i].fd = -1;
