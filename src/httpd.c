@@ -27,7 +27,9 @@ struct clients
     char ip[15];
     char port[10];
     time_t timer;
+    char background_color[10];
     GHashTable* headers;
+    GHashTable* queries;
 };
 typedef struct pollfd pollfd;
 
@@ -47,7 +49,7 @@ int check_time_outs(pollfd* fds, struct clients* client_array, int number_of_cli
 void compressor(pollfd* fds, struct clients* client_array, int* nfds);
 void for_each_func(gpointer key, gpointer val, gpointer data);
 void client_header_parser(int index, char* buffer, struct clients* client_array);
-
+void color_page(int connfd, struct clients* client_array, int index);
 
 int main(int argc, char** argv)
 {
@@ -90,13 +92,16 @@ int main(int argc, char** argv)
 
                     fds[nfds].fd = accept(sockfd, (struct sockaddr*)&client_array[nfds].client, &len);
                     fds[nfds].events = POLLIN;
-
+                    //client_array[nfds].headers = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+                    //client_array[nfds].queries = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
                     client_array[nfds].timer = time(NULL);
 
                     //get ip address and port from client
                     getnameinfo((struct sockaddr *)&client_array[nfds].client, len, client_array[nfds].ip, sizeof(client_array[nfds].ip), 
                     client_array[nfds].port, sizeof(client_array[nfds].port), NI_NUMERICHOST | NI_NUMERICSERV);
-        
+                    client_array[nfds].headers = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+                    client_array[nfds].queries = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+
                     char ip_addr[INET_ADDRSTRLEN];
                     memset(ip_addr, 0, sizeof(ip_addr));
 
@@ -170,12 +175,15 @@ void request(char* buffer, int connfd, char* ip_addr, struct clients* client_arr
     //TODO: Breyta unsupported
     char** split_buffer = g_strsplit(buffer, " ", 2);
     if(g_strcmp0(split_buffer[0], "GET") == 0){
-        if(buffer[5] != ' '){
+        if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Url"), "/color") == 0){
+            color_page(connfd, client_array, index);
+        } 
+        else if(buffer[5] != ' '){
             not_implemented(connfd);
         }
         else {
             get_request(connfd, ip_addr, client_array, index);   
-        }    
+        }
     }
     else if(g_strcmp0(split_buffer[0], "HEAD") == 0){
         head_request(connfd);
@@ -338,7 +346,21 @@ void get_request(int connfd, char* ip_addr, struct clients* client_array, int in
     
     char tmp_buffer[1024];
     memset(tmp_buffer, 0, sizeof(tmp_buffer));
-    strcpy(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body><p>");
+    strcat(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body");
+
+    char* client_query = g_hash_table_lookup(client_array[index].headers, "Query");
+
+    if(client_query != NULL){
+        char** query_split = g_strsplit(client_query, "=", 0);
+        if(g_strcmp0(query_split[0], "bg") == 0){
+            debug("Enski");
+            strcat(tmp_buffer, " style=\"background-color:");
+            strcat(tmp_buffer, query_split[1]);
+            strcat(tmp_buffer, "\"");
+        }
+        g_strfreev(query_split);
+    }
+    strcat(tmp_buffer, "><p>");
     strcat(tmp_buffer, "http://");
     strcat(tmp_buffer, ip_addr);
     strcat(tmp_buffer, "/ ");
@@ -482,18 +504,32 @@ int check_time_outs(pollfd* fds, struct clients* client_array, int number_of_cli
 }
 void client_header_parser(int index, char* buffer, struct clients* client_array){
     char** split_buffer = g_strsplit(buffer, "\r\n", 0);
-    client_array[index].headers = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+
+    
     int ind = 1;
+    int query_index = 0;
 
     char** first_split = g_strsplit(split_buffer[0], " ", 0);
     char** url_split = g_strsplit(first_split[1], "?", 0);
 
     g_hash_table_insert(client_array[index].headers, "Method", g_strdup(first_split[0]));
     g_hash_table_insert(client_array[index].headers, "Url", g_strdup(url_split[0]));
+
     if (url_split[1] != NULL)
     {
-    	g_hash_table_insert(client_array[index].headers, "Query", g_strdup(url_split[1]));
+        g_hash_table_insert(client_array[index].headers, "Query", g_strdup(url_split[1]));
+        char** query_split = g_strsplit(url_split[1], "&", 0);
+        while(query_split[query_index] != NULL){
+            debug("EnskiLoop");
+            char** sub_split = g_strsplit(query_split[query_index], "=", 0);
+            g_hash_table_insert(client_array[index].queries, g_strdup(sub_split[0]), 
+                                g_strdup(sub_split[1]));
+            g_strfreev(sub_split);
+            query_index++;
+        }
+        g_strfreev(query_split);
     }
+
     g_hash_table_insert(client_array[index].headers, "Version", g_strdup(first_split[2]));
 
     g_strfreev(first_split);
@@ -535,3 +571,48 @@ void for_each_func(gpointer key, gpointer val, gpointer data)
 	printf("%s -> %s\n", (char*)key, (char*)val);
 }
 
+void color_page(int connfd, struct clients* client_array, int index) {
+
+    char send_buffer[1024];
+    memset(send_buffer, 0, sizeof(send_buffer));
+
+    time_t ltime; /* calendar time */
+    ltime=time(NULL); /* get current cal time */
+
+    strcpy(send_buffer, "HTTP/1.1 200 OK\r\nDate: ");
+    strcat(send_buffer, asctime(localtime(&ltime)));
+    if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Connection"), "keep-alive") == 0){
+        strcat(send_buffer, "Connection: keep-alive\r\n");
+    }   
+    else{
+        strcat(send_buffer, "Connection: close\r\n");
+    }
+    strcat(send_buffer,"Content-type: text/html\r\nContent-Length: ");
+    
+    char tmp_buffer[1024];
+    memset(tmp_buffer, 0, sizeof(tmp_buffer));
+    strcat(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body");
+
+    char* client_query = g_hash_table_lookup(client_array[index].headers, "Query");
+
+    if(client_query != NULL){
+        char** query_split = g_strsplit(client_query, "=", 0);
+        if(g_strcmp0(query_split[0], "bg") == 0){
+            strcat(tmp_buffer, " style=\"background-color:");
+            strcat(tmp_buffer, query_split[1]);
+            strcat(tmp_buffer, "\">");
+        }
+        g_strfreev(query_split);
+    }
+   
+    strcat(tmp_buffer, "</body></html>");   
+
+    char len_buf[10];
+    memset(len_buf, 0, sizeof(len_buf));
+    sprintf(len_buf, "%zu", strlen(tmp_buffer));
+    strcat(send_buffer, len_buf);
+    strcat(send_buffer, "\r\n\r\n");
+    strcat(send_buffer, tmp_buffer);
+    debug(send_buffer);
+    send(connfd, send_buffer, strlen(send_buffer), 0);
+}
