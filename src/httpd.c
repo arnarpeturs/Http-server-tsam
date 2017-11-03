@@ -78,8 +78,8 @@ int main(int argc, char** argv)
         memset(buffer, 0, sizeof(buffer));
 
         rc = poll(fds, MAX_FDS, KEEP_ALIVE_TIME);
-
-        if(rc < 0){ debug("1"); exit (-1);}
+    
+        if(rc < 0){ exit (-1);}
         if (rc != 0) {
             for(int i = 0; i < MAX_FDS; i++){
                 if(fds[i].fd == -1 || !(fds[i].revents & POLLIN)){
@@ -120,10 +120,12 @@ int main(int argc, char** argv)
                     else {
                         client_header_parser(i, buffer, client_array);
                         //Reads the request type from buffer and sends appropriate response
+                        
                         request(buffer, fds[i].fd, server_ip, client_array, i);
-                        client_logger(client_array[i].ip, client_array[i].port, buffer, server_ip);
+
+                        //client_logger(client_array[i].ip, client_array[i].port, buffer, server_ip);
                         //checks for keep-alive
-                        if(strstr(buffer, "HTTP/1.0") || strstr(buffer, "Connection: close")){
+                        if(strstr(buffer, "HTTP/1.0") || strstr(buffer, "Connection: close")){                           
                             close(fds[i].fd);
                             fds[i].fd = -1;
                             compress_array = ISTRUE;
@@ -296,22 +298,18 @@ void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* cl
         g_strfreev(splitty);
     }
     else{
-        debug("anus3");
         strcat(tmp_buffer, split_buffer[1]);    
     }
     
-    debug("anus69");
     strcat(tmp_buffer, "</body></html>");
 
     char len_buf[10];
     memset(len_buf, 0, sizeof(len_buf));
     sprintf(len_buf, "%zu", strlen(tmp_buffer));
-    debug("anus4");
     strcat(send_buffer, len_buf);
     strcat(send_buffer, "\r\n\r\n");
     strcat(send_buffer, tmp_buffer);
     send(connfd, send_buffer, strlen(send_buffer), 0);
-    debug("anus5");
     g_strfreev(split_buffer);
 }
 
@@ -353,7 +351,6 @@ void get_request(int connfd, char* ip_addr, struct clients* client_array, int in
     if(client_query != NULL){
         char** query_split = g_strsplit(client_query, "=", 0);
         if(g_strcmp0(query_split[0], "bg") == 0){
-            debug("Enski");
             strcat(tmp_buffer, " style=\"background-color:");
             strcat(tmp_buffer, query_split[1]);
             strcat(tmp_buffer, "\"");
@@ -377,7 +374,6 @@ void get_request(int connfd, char* ip_addr, struct clients* client_array, int in
     strcat(send_buffer, len_buf);
     strcat(send_buffer, "\r\n\r\n");
     strcat(send_buffer, tmp_buffer);
-    debug(send_buffer);
     send(connfd, send_buffer, strlen(send_buffer), 0);
 }
 
@@ -420,11 +416,10 @@ void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* i
     if(fptr == NULL)
     {
       printf("Error!");
-      debug("2");
       exit(1);
     }
-    time_t ltime; /* calendar time */
-    ltime=time(NULL); /* get current cal time */
+    time_t ltime; 
+    ltime=time(NULL); 
 
     if(in_buffer[0] == 'G'){
         if(in_buffer[5] != ' '){
@@ -502,25 +497,24 @@ int check_time_outs(pollfd* fds, struct clients* client_array, int number_of_cli
     }
     return someone_timed_out;
 }
+
 void client_header_parser(int index, char* buffer, struct clients* client_array){
     char** split_buffer = g_strsplit(buffer, "\r\n", 0);
-
     
     int ind = 1;
     int query_index = 0;
 
     char** first_split = g_strsplit(split_buffer[0], " ", 0);
     char** url_split = g_strsplit(first_split[1], "?", 0);
-
-    g_hash_table_insert(client_array[index].headers, "Method", g_strdup(first_split[0]));
-    g_hash_table_insert(client_array[index].headers, "Url", g_strdup(url_split[0]));
-
+    g_hash_table_foreach(client_array[index].headers, for_each_func, NULL);
+    g_hash_table_insert(client_array[index].headers, g_strdup("Method"), g_strdup(first_split[0]));
+    g_hash_table_insert(client_array[index].headers, g_strdup("Url"), g_strdup(url_split[0]));
+    
     if (url_split[1] != NULL)
     {
-        g_hash_table_insert(client_array[index].headers, "Query", g_strdup(url_split[1]));
+        g_hash_table_insert(client_array[index].headers, g_strdup("Query"), g_strdup(url_split[1]));
         char** query_split = g_strsplit(url_split[1], "&", 0);
         while(query_split[query_index] != NULL){
-            debug("EnskiLoop");
             char** sub_split = g_strsplit(query_split[query_index], "=", 0);
             g_hash_table_insert(client_array[index].queries, g_strdup(sub_split[0]), 
                                 g_strdup(sub_split[1]));
@@ -529,12 +523,10 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
         }
         g_strfreev(query_split);
     }
-
-    g_hash_table_insert(client_array[index].headers, "Version", g_strdup(first_split[2]));
+    g_hash_table_insert(client_array[index].headers, g_strdup("Version"), g_strdup(first_split[2]));
 
     g_strfreev(first_split);
     g_strfreev(url_split);
-
     fprintf(stdout, "%s\n", buffer);
     fflush(stdout);
 
@@ -544,7 +536,7 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
     while(split_buffer[ind] != NULL){
         if(g_strcmp0(split_buffer[ind], "") == 0){
         	if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Method"), "POST") == 0){
-    			g_hash_table_insert(client_array[index].headers, "Data", g_strdup(split_buffer[ind+1]));
+    			g_hash_table_insert(client_array[index].headers, g_strdup("Data"), g_strdup(split_buffer[ind+1]));
         	}
         	break;
         }    	
@@ -555,13 +547,12 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
     	ind++;
     }
     if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Connection"), "keep-alive") == 0){        
-        g_hash_table_insert(client_array[index].headers,"Keep-alive", "timeout=30");
+        g_hash_table_insert(client_array[index].headers,g_strdup("Keep-alive"), g_strdup("timeout=30"));
     }
     if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Connection"), "close") == 0){        
-        g_hash_table_insert(client_array[index].headers,"close", "timeout=30");
+        g_hash_table_insert(client_array[index].headers,g_strdup("close"), g_strdup("timeout=30"));
     }
     g_strfreev(split_buffer);
-  
 	g_hash_table_foreach(client_array[index].headers, for_each_func, NULL);
 	//exit(1);
 }
