@@ -126,6 +126,8 @@ int main(int argc, char** argv)
                         close(fds[i].fd);
                         fds[i].fd = -1;
                         compress_array = ISTRUE;
+                        g_hash_table_destroy(client_array[i].queries);
+                        g_hash_table_destroy(client_array[i].headers);
                     } 
                     else {
                         client_header_parser(i, buffer, client_array);
@@ -139,6 +141,8 @@ int main(int argc, char** argv)
                             close(fds[i].fd);
                             fds[i].fd = -1;
                             compress_array = ISTRUE;
+                            g_hash_table_destroy(client_array[i].queries);
+                            g_hash_table_destroy(client_array[i].headers);
                         }
                         else{
                             client_array[i].timer = time(NULL);   
@@ -191,6 +195,7 @@ void request(char* buffer, int connfd, char* ip_addr, struct clients* client_arr
             color_page(connfd, client_array, index);
         }
         else if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Url"), "/test") == 0){
+            debug("cock tester");
             test_page(connfd, client_array, index);
         }
         else if(buffer[5] != ' '){
@@ -533,8 +538,22 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
         char** query_split = g_strsplit(url_split[1], "&", 0);
         while(query_split[query_index] != NULL){
             char** sub_split = g_strsplit(query_split[query_index], "=", 0);
+            debug(sub_split[0]);
             if(g_strcmp0(sub_split[0], "bg") == 0){
                 strcat(client_array[index].background_color, sub_split[1]);
+            }
+            debug(sub_split[1]);
+            if(sub_split[1] != NULL){
+                if(strstr(sub_split[1], "=")){
+                    query_index++;
+                    g_strfreev(sub_split);
+                    continue;
+                }
+            }
+            if(sub_split[1] == NULL){
+                query_index++;
+                g_strfreev(sub_split);
+                continue;
             }
             g_hash_table_insert(client_array[index].queries, g_strdup(sub_split[0]), 
                                 g_strdup(sub_split[1]));
@@ -574,6 +593,7 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
     }
     g_strfreev(split_buffer);
     g_hash_table_foreach(client_array[index].headers, for_each_func, NULL);
+
     //exit(1);
 }
 
@@ -661,7 +681,7 @@ int is_numeric(const char* port, size_t len){
 }
 
 void test_page(int connfd, struct clients* client_array, int index) {
-
+    debug("asdf");
     char send_buffer[1024];
     memset(send_buffer, 0, sizeof(send_buffer));
 
@@ -670,6 +690,7 @@ void test_page(int connfd, struct clients* client_array, int index) {
 
     strcpy(send_buffer, "HTTP/1.1 200 OK\r\nDate: ");
     strcat(send_buffer, asctime(localtime(&ltime)));
+    
     if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Connection"), "keep-alive") == 0){
         strcat(send_buffer, "Connection: keep-alive\r\n");
     }   
@@ -681,8 +702,9 @@ void test_page(int connfd, struct clients* client_array, int index) {
     char tmp_buffer[1024];
     memset(tmp_buffer, 0, sizeof(tmp_buffer));
     strcat(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body>");
-
+debug("cuntmaster");
     g_hash_table_foreach(client_array[index].queries, add_queries_to_html, tmp_buffer);
+ //   g_hash_table_foreach(client_array[index].queries, for_each_func, NULL);
 
     strcat(tmp_buffer, "</body></html>");   
 
