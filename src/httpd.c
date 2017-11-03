@@ -78,8 +78,8 @@ int main(int argc, char** argv)
         memset(buffer, 0, sizeof(buffer));
 
         rc = poll(fds, MAX_FDS, KEEP_ALIVE_TIME);
-    
-        if(rc < 0){ exit (-1);}
+
+        if(rc < 0){ debug("1"); exit (-1);}
         if (rc != 0) {
             for(int i = 0; i < MAX_FDS; i++){
                 if(fds[i].fd == -1 || !(fds[i].revents & POLLIN)){
@@ -89,7 +89,7 @@ int main(int argc, char** argv)
                     socklen_t len = (socklen_t)sizeof(struct sockaddr_in);
                     memset(client_array[nfds].ip, 0, sizeof(client_array[nfds].ip));
                     memset(client_array[nfds].port, 0, sizeof(client_array[nfds].port));
-
+                    memset(client_array[nfds].background_color, 0, sizeof(client_array[nfds].background_color));
                     fds[nfds].fd = accept(sockfd, (struct sockaddr*)&client_array[nfds].client, &len);
                     fds[nfds].events = POLLIN;
                     //client_array[nfds].headers = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
@@ -113,6 +113,7 @@ int main(int argc, char** argv)
                     rc = recv(fds[i].fd, buffer, sizeof(buffer) -1, 0);
 
                     if(rc == 0){
+                        debug("CLOSING CLIENT");
                         close(fds[i].fd);
                         fds[i].fd = -1;
                         compress_array = ISTRUE;
@@ -120,12 +121,11 @@ int main(int argc, char** argv)
                     else {
                         client_header_parser(i, buffer, client_array);
                         //Reads the request type from buffer and sends appropriate response
-                        
                         request(buffer, fds[i].fd, server_ip, client_array, i);
-
-                        //client_logger(client_array[i].ip, client_array[i].port, buffer, server_ip);
+                        client_logger(client_array[i].ip, client_array[i].port, buffer, server_ip);
                         //checks for keep-alive
-                        if(strstr(buffer, "HTTP/1.0") || strstr(buffer, "Connection: close")){                           
+                        if(strstr(buffer, "HTTP/1.0") || strstr(buffer, "Connection: close")){
+                            debug("CLOSING CLIENT");
                             close(fds[i].fd);
                             fds[i].fd = -1;
                             compress_array = ISTRUE;
@@ -298,18 +298,22 @@ void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* cl
         g_strfreev(splitty);
     }
     else{
+        debug("anus3");
         strcat(tmp_buffer, split_buffer[1]);    
     }
     
+    debug("anus69");
     strcat(tmp_buffer, "</body></html>");
 
     char len_buf[10];
     memset(len_buf, 0, sizeof(len_buf));
     sprintf(len_buf, "%zu", strlen(tmp_buffer));
+    debug("anus4");
     strcat(send_buffer, len_buf);
     strcat(send_buffer, "\r\n\r\n");
     strcat(send_buffer, tmp_buffer);
     send(connfd, send_buffer, strlen(send_buffer), 0);
+    debug("anus5");
     g_strfreev(split_buffer);
 }
 
@@ -351,6 +355,7 @@ void get_request(int connfd, char* ip_addr, struct clients* client_array, int in
     if(client_query != NULL){
         char** query_split = g_strsplit(client_query, "=", 0);
         if(g_strcmp0(query_split[0], "bg") == 0){
+            debug("Enski");
             strcat(tmp_buffer, " style=\"background-color:");
             strcat(tmp_buffer, query_split[1]);
             strcat(tmp_buffer, "\"");
@@ -374,6 +379,7 @@ void get_request(int connfd, char* ip_addr, struct clients* client_array, int in
     strcat(send_buffer, len_buf);
     strcat(send_buffer, "\r\n\r\n");
     strcat(send_buffer, tmp_buffer);
+    debug(send_buffer);
     send(connfd, send_buffer, strlen(send_buffer), 0);
 }
 
@@ -416,10 +422,11 @@ void client_logger(char* host_ip, char* host_port, char in_buffer[1024], char* i
     if(fptr == NULL)
     {
       printf("Error!");
+      debug("2");
       exit(1);
     }
-    time_t ltime; 
-    ltime=time(NULL); 
+    time_t ltime; /* calendar time */
+    ltime=time(NULL); /* get current cal time */
 
     if(in_buffer[0] == 'G'){
         if(in_buffer[5] != ' '){
@@ -497,9 +504,8 @@ int check_time_outs(pollfd* fds, struct clients* client_array, int number_of_cli
     }
     return someone_timed_out;
 }
-
 void client_header_parser(int index, char* buffer, struct clients* client_array){
-    char** split_buffer = g_strsplit(buffer, "\r\n", 0);
+   char** split_buffer = g_strsplit(buffer, "\r\n", 0);
     
     int ind = 1;
     int query_index = 0;
@@ -516,6 +522,9 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
         char** query_split = g_strsplit(url_split[1], "&", 0);
         while(query_split[query_index] != NULL){
             char** sub_split = g_strsplit(query_split[query_index], "=", 0);
+            if(g_strcmp0(sub_split[0], "bg") == 0){
+                strcat(client_array[index].background_color, sub_split[1]);
+            }
             g_hash_table_insert(client_array[index].queries, g_strdup(sub_split[0]), 
                                 g_strdup(sub_split[1]));
             g_strfreev(sub_split);
@@ -535,16 +544,16 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
 
     while(split_buffer[ind] != NULL){
         if(g_strcmp0(split_buffer[ind], "") == 0){
-        	if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Method"), "POST") == 0){
-    			g_hash_table_insert(client_array[index].headers, g_strdup("Data"), g_strdup(split_buffer[ind+1]));
-        	}
-        	break;
-        }    	
+            if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Method"), "POST") == 0){
+                g_hash_table_insert(client_array[index].headers, g_strdup("Data"), g_strdup(split_buffer[ind+1]));
+            }
+            break;
+        }       
         char ** temp_split = g_strsplit(split_buffer[ind], ": ", 0);
-    	g_hash_table_insert(client_array[index].headers, 
-    		g_strdup(temp_split[0]), g_strdup(temp_split[1]));
-    	g_strfreev(temp_split);
-    	ind++;
+        g_hash_table_insert(client_array[index].headers, 
+            g_strdup(temp_split[0]), g_strdup(temp_split[1]));
+        g_strfreev(temp_split);
+        ind++;
     }
     if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Connection"), "keep-alive") == 0){        
         g_hash_table_insert(client_array[index].headers,g_strdup("Keep-alive"), g_strdup("timeout=30"));
@@ -553,8 +562,8 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
         g_hash_table_insert(client_array[index].headers,g_strdup("close"), g_strdup("timeout=30"));
     }
     g_strfreev(split_buffer);
-	g_hash_table_foreach(client_array[index].headers, for_each_func, NULL);
-	//exit(1);
+    g_hash_table_foreach(client_array[index].headers, for_each_func, NULL);
+    //exit(1);
 }
 
 void for_each_func(gpointer key, gpointer val, gpointer data)
@@ -584,16 +593,18 @@ void color_page(int connfd, struct clients* client_array, int index) {
     memset(tmp_buffer, 0, sizeof(tmp_buffer));
     strcat(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body");
 
-    char* client_query = g_hash_table_lookup(client_array[index].headers, "Query");
+   
+    char* cock = (g_hash_table_lookup(client_array[index].queries, "bg"));
 
-    if(client_query != NULL){
-        char** query_split = g_strsplit(client_query, "=", 0);
-        if(g_strcmp0(query_split[0], "bg") == 0){
-            strcat(tmp_buffer, " style=\"background-color:");
-            strcat(tmp_buffer, query_split[1]);
-            strcat(tmp_buffer, "\">");
-        }
-        g_strfreev(query_split);
+    if(cock != NULL){
+        strcat(tmp_buffer, " style=\"background-color:");
+        strcat(tmp_buffer, cock);
+        strcat(tmp_buffer, "\">");
+    }
+    else{
+        strcat(tmp_buffer, " style=\"background-color:");
+        strcat(tmp_buffer, client_array[index].background_color);
+        strcat(tmp_buffer, "\">");
     }
    
     strcat(tmp_buffer, "</body></html>");   
