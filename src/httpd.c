@@ -88,11 +88,12 @@ int main(int argc, char** argv)
         memset(buffer, 0, sizeof(buffer));
 
         rc = poll(fds, MAX_FDS, KEEP_ALIVE_TIME);
-
-        if(rc < 0){ debug("1"); exit (-1);}
+        debug("poll()");
+        if(rc < 0){ exit (-1);}
         if (rc != 0) {
             for(int i = 0; i < MAX_FDS; i++){
                 if(fds[i].fd == -1 || !(fds[i].revents & POLLIN)){
+                    debug("fd = 1");
                     continue;
                 }
                 if(i == 0){
@@ -116,11 +117,13 @@ int main(int argc, char** argv)
                     memset(ip_addr, 0, sizeof(ip_addr));
 
                     inet_ntop(AF_INET, &client_array[nfds].client.sin_addr, ip_addr, INET_ADDRSTRLEN);
+                    debug("New Client added");
                     nfds++;
 
                 }
                 else {
                     rc = recv(fds[i].fd, buffer, sizeof(buffer) -1, 0);
+                    debug("recieved shit from client");
 
                     if(rc == 0){
                         debug("CLOSING CLIENT");
@@ -131,9 +134,10 @@ int main(int argc, char** argv)
                         g_hash_table_destroy(client_array[i].headers);
                     } 
                     else {
+                        debug("parsing");
                         client_header_parser(i, buffer, client_array);
                         //Reads the request type from buffer and sends appropriate response
-    
+                        debug("parsing done");
                         request(buffer, fds[i].fd, server_ip, client_array, i);
                         client_logger(buffer, client_array, i);
                         //checks for keep-alive
@@ -146,15 +150,17 @@ int main(int argc, char** argv)
                             g_hash_table_destroy(client_array[i].headers);
                         }
                         else{
-                            client_array[i].timer = time(NULL);   
+                            client_array[i].timer = time(NULL);
+                            debug("reseting client timer");
                         }
                     }
                 }
             }
         }
         //If client has timed out or closed connection we set compress_array to TRUE and call the compressor function
-        if (check_time_outs(fds, client_array, nfds)) compress_array = ISTRUE;
+        if (check_time_outs(fds, client_array, nfds)) debug("check_timeout = true"); compress_array = ISTRUE;
         if(compress_array){
+            debug("about to compress");
             compress_array = ISFALSE;
             compressor(fds,client_array, &nfds);
         }
@@ -196,7 +202,6 @@ void request(char* buffer, int connfd, char* ip_addr, struct clients* client_arr
             color_page(connfd, client_array, index);
         }
         else if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Url"), "/test") == 0){
-            debug("cock tester");
             test_page(connfd, client_array, index);
         }
         else if(buffer[5] != ' '){
@@ -325,12 +330,10 @@ void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* cl
     char len_buf[10];
     memset(len_buf, 0, sizeof(len_buf));
     sprintf(len_buf, "%zu", strlen(tmp_buffer));
-    debug("anus4");
     strcat(send_buffer, len_buf);
     strcat(send_buffer, "\r\n\r\n");
     strcat(send_buffer, tmp_buffer);
     send(connfd, send_buffer, strlen(send_buffer), 0);
-    debug("anus5");
     g_strfreev(split_buffer);
 }
 
@@ -372,7 +375,6 @@ void get_request(int connfd, char* ip_addr, struct clients* client_array, int in
     if(client_query != NULL){
         char** query_split = g_strsplit(client_query, "=", 0);
         if(g_strcmp0(query_split[0], "bg") == 0){
-            debug("Enski");
             strcat(tmp_buffer, " style=\"background-color:");
             strcat(tmp_buffer, query_split[1]);
             strcat(tmp_buffer, "\"");
@@ -397,7 +399,6 @@ void get_request(int connfd, char* ip_addr, struct clients* client_array, int in
     strcat(send_buffer, len_buf);
     strcat(send_buffer, "\r\n\r\n");
     strcat(send_buffer, tmp_buffer);
-    debug(send_buffer);
     send(connfd, send_buffer, strlen(send_buffer), 0);
 }
 
@@ -567,11 +568,9 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
         char** query_split = g_strsplit(url_split[1], "&", 0);
         while(query_split[query_index] != NULL){
             char** sub_split = g_strsplit(query_split[query_index], "=", 0);
-            debug(sub_split[0]);
             if(g_strcmp0(sub_split[0], "bg") == 0){
                 strcat(client_array[index].background_color, sub_split[1]);
             }
-            debug(sub_split[1]);
             if(sub_split[1] != NULL){
                 if(strstr(sub_split[1], "=")){
                     query_index++;
@@ -595,11 +594,11 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
 
     g_strfreev(first_split);
     g_strfreev(url_split);
-    fprintf(stdout, "%s\n", buffer);
+    /*fprintf(stdout, "%s\n", buffer);
     fflush(stdout);
 
     fprintf(stdout, "%s\n", "i am the fuck the chineese master of cocks");
-    fflush(stdout);
+    fflush(stdout);*/
 
     while(split_buffer[ind] != NULL){
         if(g_strcmp0(split_buffer[ind], "") == 0){
@@ -684,7 +683,6 @@ void color_page(int connfd, struct clients* client_array, int index) {
     strcat(send_buffer, len_buf);
     strcat(send_buffer, "\r\n\r\n");
     strcat(send_buffer, tmp_buffer);
-    debug(send_buffer);
     send(connfd, send_buffer, strlen(send_buffer), 0);
 }
 
@@ -710,7 +708,6 @@ int is_numeric(const char* port, size_t len){
 }
 
 void test_page(int connfd, struct clients* client_array, int index) {
-    debug("asdf");
     char send_buffer[1024];
     memset(send_buffer, 0, sizeof(send_buffer));
 
@@ -731,7 +728,7 @@ void test_page(int connfd, struct clients* client_array, int index) {
     char tmp_buffer[1024];
     memset(tmp_buffer, 0, sizeof(tmp_buffer));
     strcat(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body>");
-debug("cuntmaster");
+
     g_hash_table_foreach(client_array[index].queries, add_queries_to_html, tmp_buffer);
  //   g_hash_table_foreach(client_array[index].queries, for_each_func, NULL);
 
@@ -743,6 +740,5 @@ debug("cuntmaster");
     strcat(send_buffer, len_buf);
     strcat(send_buffer, "\r\n\r\n");
     strcat(send_buffer, tmp_buffer);
-    debug(send_buffer);
     send(connfd, send_buffer, strlen(send_buffer), 0);
 }
