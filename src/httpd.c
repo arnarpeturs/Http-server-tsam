@@ -15,6 +15,7 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 
+#define NO_FD -1
 #define ISTRUE 1 
 #define ISFALSE 0
 #define MAX_FDS 200
@@ -176,7 +177,7 @@ void start_server(int *sockfd, struct sockaddr_in *server, unsigned short port_n
         perror("bind failed");
         exit(-1);
     }
-    rc = listen(*sockfd, 32);
+    rc = listen(*sockfd, 200);
     if(rc < 0){
         perror("listen failed");
         exit(-1);
@@ -412,7 +413,7 @@ void head_request(int connfd){
     char* prequel = "HTTP/1.1 200 OK\r\n"    
     "Connection: close\r\n"
     "Content-type: text/html \r\n"
-    "Content-length: 213\r\n"
+    "Content-length: 220\r\n"
     "Date: "; 
     char* sequel = "Location: 127.0.0.1\r\n"
     "Server: cool server 2.0\r\n";
@@ -486,9 +487,34 @@ void client_logger(char in_buffer[1024], struct clients* client_array, int index
 }
 /*
 * If a client closes connection it minimizes the client and fds arrays to the number of clients connected
-*/
+*//*
+void compressor(server_info* server) {
+
+    DEBUG_PRINT("Compressing array. Size before compression: %d\n", server->fds_in_use);
+
+    // compress from right end
+    while (server->fds[server->fds_in_use - 1].fd == NO_FD) server->fds_in_use--;
+    // compress from left end
+    for (int32_t i = 1; i < server->fds_in_use - 1; i++) {
+        if (server->fds[i].fd == NO_FD) {
+            for(int32_t j = i; j < server->fds_in_use - 1; j++) {
+                server->fds[j].fd = server->fds[j+1].fd;
+                server->fds[j].revents = server->fds[j+1].revents;
+            }
+            server->fds_in_use--;
+        }
+    }
+    // remove excessive fds to the right 'max_in_use - 1'
+    for (int32_t i = server->fds_in_use; i < MAX_CLIENTS && server->fds[i].fd != NO_FD; i++) {
+        server->fds[i].fd = NO_FD;
+    }
+    server->compress = false;
+
+    DEBUG_PRINT("Compression complete. Size after compression: %d\n", server->fds_in_use);
+}*/
 void compressor(pollfd* fds, struct clients* client_array, int* nfds){
     int tmp = *nfds;
+    while(fds[tmp-1].fd == -1){tmp--;}
     for(int i = 0; i < tmp; i++){
         if(fds[i].fd == -1){
             for(int j = i; j < tmp; j++){
@@ -497,6 +523,9 @@ void compressor(pollfd* fds, struct clients* client_array, int* nfds){
             }
             (*nfds)--;
         }
+    }
+    for(int i = tmp; i < MAX_FDS && fds[i].fd != -1; i++){
+        fds[i].fd = -1;
     }
 }
 
