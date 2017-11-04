@@ -1041,3 +1041,391 @@ Fri Nov  3 22:23:38 2017
  : 127.0.0.1:34748 GET http://localhost:6969/ : 200 OK
 Fri Nov  3 22:23:38 2017
  : 127.0.0.1:34749 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:42:21 2017
+ : 127.0.0.1:34844 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:42:21 2017
+ : 127.0.0.1:34845 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:43:11 2017
+ : 127.0.0.1:34865 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:43:11 2017
+ : 127.0.0.1:34866 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:50:06 2017
+ : 127.0.0.1:34932 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:50:06 2017
+ : 127.0.0.1:34933 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:54:32 2017
+ : 127.0.0.1:34963 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:54:32 2017
+ : 127.0.0.1:34962 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:56:05 2017
+ : 127.0.0.1:34986 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:56:05 2017
+ : 127.0.0.1:34987 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:57:13 2017
+ : 127.0.0.1:35010 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:57:13 2017
+ : 127.0.0.1:35011 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:58:45 2017
+ : 127.0.0.1:35050 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 22:58:45 2017
+ : 127.0.0.1:35051 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 23:02:56 2017
+ : 127.0.0.1:35077 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 23:02:56 2017
+ : 127.0.0.1:35076 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 23:07:58 2017
+ : 127.0.0.1:35118 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 23:07:58 2017
+ : 127.0.0.1:35120 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 23:09:09 2017
+ : 127.0.0.1:35141 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 23:09:09 2017
+ : 127.0.0.1:35143 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 23:12:42 2017
+ : 127.0.0.1:35240 GET http://127.0.0.1:6969/ : 200 OK
+Fri Nov  3 23:12:42 2017
+ : 127.0.0.1:35241 ERROR http://127.0.0.1:6969/favicon.ico : 404 Not Found
+Fri Nov  3 23:12:48 2017
+ : 127.0.0.1:35245 GET http://127.0.0.1:6969/ : 200 OK
+Fri Nov  3 23:12:50 2017
+ : 127.0.0.1:35254 GET http://127.0.0.1:6969/ : 200 OK
+Fri Nov  3 23:12:59 2017
+ : 127.0.0.1:35280 GET http://127.0.0.1:6969/ : 200 OK
+Fri Nov  3 23:13:00 2017
+ : 127.0.0.1:35280 ERROR http://127.0.0.1:6969/favicon.ico : 404 Not Found
+Fri Nov  3 23:18:25 2017
+ : 127.0.0.1:35361 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 23:18:25 2017
+ : 127.0.0.1:35362 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 23:53:47 2017
+ : 127.0.0.1:35574 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 23:53:47 2017
+ : 127.0.0.1:35575 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 23:56:57 2017
+ : 127.0.0.1:35601 GET http://localhost:6969/ : 200 OK
+Fri Nov  3 23:56:57 2017
+ : 127.0.0.1:35602 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 00:06:52 2017
+ : 127.0.0.1:35660 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 00:06:52 2017
+ : 127.0.0.1:35661 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 00:08:42 2017
+ : 127.0.0.1:35720 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 00:08:42 2017
+ : 127.0.0.1:35721 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 00:09:14 2017
+ : 127.0.0.1:35739 GET http://127.0.0.1:6969/ : 200 OK
+Sat Nov  4 00:09:17 2017
+ : 127.0.0.1:35739 GET http://127.0.0.1:6969/ : 200 OK
+Sat Nov  4 00:09:22 2017
+ : 127.0.0.1:35739 GET http://127.0.0.1:6969/ : 200 OK
+Sat Nov  4 00:09:25 2017
+ : 127.0.0.1:35739 GET http://127.0.0.1:6969/ : 200 OK
+Sat Nov  4 00:09:42 2017
+ : 127.0.0.1:35739 GET http://127.0.0.1:6969/ : 200 OK
+Sat Nov  4 00:31:44 2017
+ : 127.0.0.1:35874 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 00:31:44 2017
+ : 127.0.0.1:35875 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:28 2017
+ : 127.0.0.1:40301 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:28 2017
+ : 127.0.0.1:40303 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:28 2017
+ : 127.0.0.1:40302 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:28 2017
+ : 127.0.0.1:40304 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:28 2017
+ : 127.0.0.1:40306 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:28 2017
+ : 127.0.0.1:40305 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:28 2017
+ : 127.0.0.1:40307 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:28 2017
+ : 127.0.0.1:40308 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:28 2017
+ : 127.0.0.1:40309 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:28 2017
+ : 127.0.0.1:40310 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:29 2017
+ : 127.0.0.1:40321 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:29 2017
+ : 127.0.0.1:40322 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:29 2017
+ : 127.0.0.1:40324 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:29 2017
+ : 127.0.0.1:40323 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:29 2017
+ : 127.0.0.1:40325 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:29 2017
+ : 127.0.0.1:40326 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:30 2017
+ : 127.0.0.1:40327 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:30 2017
+ : 127.0.0.1:40329 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:30 2017
+ : 127.0.0.1:40328 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:30 2017
+ : 127.0.0.1:40330 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:31 2017
+ : 127.0.0.1:40341 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:31 2017
+ : 127.0.0.1:40342 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:31 2017
+ : 127.0.0.1:40343 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:31 2017
+ : 127.0.0.1:40344 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:31 2017
+ : 127.0.0.1:40345 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:31 2017
+ : 127.0.0.1:40346 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:31 2017
+ : 127.0.0.1:40347 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:31 2017
+ : 127.0.0.1:40348 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:31 2017
+ : 127.0.0.1:40349 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:31 2017
+ : 127.0.0.1:40350 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:32 2017
+ : 127.0.0.1:40361 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:32 2017
+ : 127.0.0.1:40362 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:32 2017
+ : 127.0.0.1:40363 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:32 2017
+ : 127.0.0.1:40364 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:32 2017
+ : 127.0.0.1:40365 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:32 2017
+ : 127.0.0.1:40366 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:32 2017
+ : 127.0.0.1:40368 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:32 2017
+ : 127.0.0.1:40367 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:32 2017
+ : 127.0.0.1:40369 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:05:32 2017
+ : 127.0.0.1:40370 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:25 2017
+ : 127.0.0.1:40428 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:25 2017
+ : 127.0.0.1:40429 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:25 2017
+ : 127.0.0.1:40430 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:25 2017
+ : 127.0.0.1:40431 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:25 2017
+ : 127.0.0.1:40432 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:25 2017
+ : 127.0.0.1:40433 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:25 2017
+ : 127.0.0.1:40434 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:25 2017
+ : 127.0.0.1:40435 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:25 2017
+ : 127.0.0.1:40436 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:25 2017
+ : 127.0.0.1:40437 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:26 2017
+ : 127.0.0.1:40448 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:26 2017
+ : 127.0.0.1:40449 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:26 2017
+ : 127.0.0.1:40450 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:26 2017
+ : 127.0.0.1:40451 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:26 2017
+ : 127.0.0.1:40452 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:26 2017
+ : 127.0.0.1:40453 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:26 2017
+ : 127.0.0.1:40454 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:26 2017
+ : 127.0.0.1:40455 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:26 2017
+ : 127.0.0.1:40456 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:26 2017
+ : 127.0.0.1:40457 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:27 2017
+ : 127.0.0.1:40468 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:27 2017
+ : 127.0.0.1:40469 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:27 2017
+ : 127.0.0.1:40470 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:27 2017
+ : 127.0.0.1:40471 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:27 2017
+ : 127.0.0.1:40472 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:27 2017
+ : 127.0.0.1:40473 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:27 2017
+ : 127.0.0.1:40474 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:27 2017
+ : 127.0.0.1:40475 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:27 2017
+ : 127.0.0.1:40476 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:27 2017
+ : 127.0.0.1:40477 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:29 2017
+ : 127.0.0.1:40488 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:29 2017
+ : 127.0.0.1:40489 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:29 2017
+ : 127.0.0.1:40490 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:29 2017
+ : 127.0.0.1:40491 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:29 2017
+ : 127.0.0.1:40492 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:29 2017
+ : 127.0.0.1:40493 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:29 2017
+ : 127.0.0.1:40494 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:29 2017
+ : 127.0.0.1:40495 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:29 2017
+ : 127.0.0.1:40496 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:13:29 2017
+ : 127.0.0.1:40497 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:14:39 2017
+ : 127.0.0.1:40504 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:14:40 2017
+ : 127.0.0.1:40506 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:14:41 2017
+ : 127.0.0.1:40508 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:14:42 2017
+ : 127.0.0.1:40510 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:14:43 2017
+ : 127.0.0.1:40512 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:14:44 2017
+ : 127.0.0.1:40514 HEAD http://localhost:6969/ : 200 OK
+Sat Nov  4 14:14:45 2017
+ : 127.0.0.1:40516 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:14:46 2017
+ : 127.0.0.1:40518 ERROR http://localhost:6969/ : 501 Not implemented
+Sat Nov  4 14:14:47 2017
+ : 127.0.0.1:40520 ERROR http://localhost:6969/ : 501 Not implemented
+Sat Nov  4 14:14:48 2017
+ : 127.0.0.1:40522 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:06 2017
+ : 127.0.0.1:40526 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:07 2017
+ : 127.0.0.1:40528 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:08 2017
+ : 127.0.0.1:40530 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:09 2017
+ : 127.0.0.1:40532 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:10 2017
+ : 127.0.0.1:40534 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:11 2017
+ : 127.0.0.1:40536 HEAD http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:12 2017
+ : 127.0.0.1:40538 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:13 2017
+ : 127.0.0.1:40540 ERROR http://localhost:6969/ : 501 Not implemented
+Sat Nov  4 14:15:14 2017
+ : 127.0.0.1:40542 ERROR http://localhost:6969/ : 501 Not implemented
+Sat Nov  4 14:15:15 2017
+ : 127.0.0.1:40544 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:16 2017
+ : 127.0.0.1:40546 HEAD http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:17 2017
+ : 127.0.0.1:40557 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:17 2017
+ : 127.0.0.1:40559 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:17 2017
+ : 127.0.0.1:40558 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:17 2017
+ : 127.0.0.1:40560 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:17 2017
+ : 127.0.0.1:40561 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:17 2017
+ : 127.0.0.1:40562 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:17 2017
+ : 127.0.0.1:40563 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:17 2017
+ : 127.0.0.1:40564 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:17 2017
+ : 127.0.0.1:40565 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:17 2017
+ : 127.0.0.1:40566 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:19 2017
+ : 127.0.0.1:40577 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:19 2017
+ : 127.0.0.1:40578 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:19 2017
+ : 127.0.0.1:40579 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:19 2017
+ : 127.0.0.1:40580 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:19 2017
+ : 127.0.0.1:40581 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:19 2017
+ : 127.0.0.1:40582 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:19 2017
+ : 127.0.0.1:40583 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:19 2017
+ : 127.0.0.1:40584 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:19 2017
+ : 127.0.0.1:40585 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:19 2017
+ : 127.0.0.1:40586 GET http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:20 2017
+ : 127.0.0.1:40597 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:20 2017
+ : 127.0.0.1:40598 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:20 2017
+ : 127.0.0.1:40599 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:20 2017
+ : 127.0.0.1:40600 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:20 2017
+ : 127.0.0.1:40601 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:20 2017
+ : 127.0.0.1:40602 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:20 2017
+ : 127.0.0.1:40603 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:20 2017
+ : 127.0.0.1:40604 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:20 2017
+ : 127.0.0.1:40605 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:20 2017
+ : 127.0.0.1:40606 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:22 2017
+ : 127.0.0.1:40617 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:22 2017
+ : 127.0.0.1:40618 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:22 2017
+ : 127.0.0.1:40619 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:22 2017
+ : 127.0.0.1:40620 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:22 2017
+ : 127.0.0.1:40621 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:22 2017
+ : 127.0.0.1:40622 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:22 2017
+ : 127.0.0.1:40623 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:22 2017
+ : 127.0.0.1:40624 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:22 2017
+ : 127.0.0.1:40625 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:15:22 2017
+ : 127.0.0.1:40626 POST http://localhost:6969/ : 200 OK
+Sat Nov  4 14:36:14 2017
+ : 127.0.0.1:40813 GET http://127.0.0.1:6969/ : 200 OK
+Sat Nov  4 14:36:22 2017
+ : 127.0.0.1:40813 ERROR http://127.0.0.1:6969/ : 404 Not Found
+Sat Nov  4 14:36:30 2017
+ : 127.0.0.1:40813 ERROR http://127.0.0.1:6969/color : 404 Not Found
+Sat Nov  4 14:49:12 2017
+ : 127.0.0.1:40866 GET http://127.0.0.1:6969/ : 200 OK
+Sat Nov  4 14:49:18 2017
+ : 127.0.0.1:40866 ERROR http://127.0.0.1:6969/ : 404 Not Found
+Sat Nov  4 14:49:24 2017
+ : 127.0.0.1:40866 ERROR http://127.0.0.1:6969/color : 404 Not Found
+Sat Nov  4 14:49:54 2017
+ : 127.0.0.1:40890 ERROR http://127.0.0.1:6969/test : 404 Not Found
+Sat Nov  4 14:50:00 2017
+ : 127.0.0.1:40890 ERROR http://127.0.0.1:6969/color : 404 Not Found
+Sat Nov  4 14:51:56 2017
+ : 127.0.0.1:40893 ERROR http://127.0.0.1:6969/test : 404 Not Found
+Sat Nov  4 14:52:00 2017
+ : 127.0.0.1:40893 ERROR http://127.0.0.1:6969/color : 404 Not Found

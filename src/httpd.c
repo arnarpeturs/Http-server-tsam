@@ -88,12 +88,11 @@ int main(int argc, char** argv)
         memset(buffer, 0, sizeof(buffer));
 
         rc = poll(fds, MAX_FDS, KEEP_ALIVE_TIME);
-        debug("poll()");
+        
         if(rc < 0){ exit (-1);}
         if (rc != 0) {
             for(int i = 0; i < MAX_FDS; i++){
                 if(fds[i].fd == -1 || !(fds[i].revents & POLLIN)){
-                    debug("fd = 1");
                     continue;
                 }
                 if(i == 0){
@@ -142,7 +141,7 @@ int main(int argc, char** argv)
                         client_logger(buffer, client_array, i);
                         //checks for keep-alive
                         if(strstr(buffer, "HTTP/1.0") || strstr(buffer, "Connection: close")){
-                            debug("CLOSING CLIENT");
+                            debug("CLOSING DOCKS");
                             close(fds[i].fd);
                             fds[i].fd = -1;
                             compress_array = ISTRUE;
@@ -158,11 +157,13 @@ int main(int argc, char** argv)
             }
         }
         //If client has timed out or closed connection we set compress_array to TRUE and call the compressor function
-        if (check_time_outs(fds, client_array, nfds)) debug("check_timeout = true"); compress_array = ISTRUE;
+        if (check_time_outs(fds, client_array, nfds) == 1) {
+            debug("check_timeout = true"); 
+            compress_array = ISTRUE;
+        }
         if(compress_array){
-            debug("about to compress");
             compress_array = ISFALSE;
-            compressor(fds,client_array, &nfds);
+        //    compressor(fds,client_array, &nfds);
         }
     }
 }
@@ -488,46 +489,29 @@ void client_logger(char in_buffer[1024], struct clients* client_array, int index
 }
 /*
 * If a client closes connection it minimizes the client and fds arrays to the number of clients connected
-*//*
-void compressor(server_info* server) {
-
-    DEBUG_PRINT("Compressing array. Size before compression: %d\n", server->fds_in_use);
-
-    // compress from right end
-    while (server->fds[server->fds_in_use - 1].fd == NO_FD) server->fds_in_use--;
-    // compress from left end
-    for (int32_t i = 1; i < server->fds_in_use - 1; i++) {
-        if (server->fds[i].fd == NO_FD) {
-            for(int32_t j = i; j < server->fds_in_use - 1; j++) {
-                server->fds[j].fd = server->fds[j+1].fd;
-                server->fds[j].revents = server->fds[j+1].revents;
-            }
-            server->fds_in_use--;
-        }
-    }
-    // remove excessive fds to the right 'max_in_use - 1'
-    for (int32_t i = server->fds_in_use; i < MAX_CLIENTS && server->fds[i].fd != NO_FD; i++) {
-        server->fds[i].fd = NO_FD;
-    }
-    server->compress = false;
-
-    DEBUG_PRINT("Compression complete. Size after compression: %d\n", server->fds_in_use);
-}*/
+*/
 void compressor(pollfd* fds, struct clients* client_array, int* nfds){
-    int tmp = *nfds;
-    while(fds[tmp-1].fd == -1){tmp--;}
-    for(int i = 0; i < tmp; i++){
+    int tmp = *nfds; 
+    fprintf(stdout, "%i\n", (*nfds));
+    fflush(stdout);
+    while(fds[(*nfds)-1].fd == -1){(*nfds)--;}
+    for(int i = 1; i < (*nfds); i++){
         if(fds[i].fd == -1){
-            for(int j = i; j < tmp; j++){
+            for(int j = i; j < (*nfds)-1; j++){
                 memcpy(&client_array[j+1], &client_array[j], sizeof(client_array[j]));
                 fds[j].fd = fds[j+1].fd;
             }
+            debug("cunt");
             (*nfds)--;
         }
     }
-    for(int i = tmp; i < MAX_FDS && fds[i].fd != -1; i++){
+    fprintf(stdout, "%i\n", (*nfds));
+    fflush(stdout);
+    for(int i = (*nfds); i < MAX_FDS && fds[i].fd != -1; i++){
         fds[i].fd = -1;
     }
+    fprintf(stdout, "%i\n", (*nfds));
+    fflush(stdout);
 }
 
 /*
@@ -561,35 +545,40 @@ void client_header_parser(int index, char* buffer, struct clients* client_array)
     g_hash_table_foreach(client_array[index].headers, for_each_func, NULL);
     g_hash_table_insert(client_array[index].headers, g_strdup("Method"), g_strdup(first_split[0]));
     g_hash_table_insert(client_array[index].headers, g_strdup("Url"), g_strdup(url_split[0]));
-    
-    if (url_split[1] != NULL)
-    {
-        g_hash_table_insert(client_array[index].headers, g_strdup("Query"), g_strdup(url_split[1]));
-        char** query_split = g_strsplit(url_split[1], "&", 0);
-        while(query_split[query_index] != NULL){
-            char** sub_split = g_strsplit(query_split[query_index], "=", 0);
-            if(g_strcmp0(sub_split[0], "bg") == 0){
-                strcat(client_array[index].background_color, sub_split[1]);
-            }
-            if(sub_split[1] != NULL){
-                if(strstr(sub_split[1], "=")){
+   
+    if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Url"), "/test") == 0 ||
+        g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Url"), "/color") == 0){
+        if (url_split[1] != NULL){
+            g_hash_table_insert(client_array[index].headers, g_strdup("Query"), g_strdup(url_split[1]));
+            char** query_split = g_strsplit(url_split[1], "&", 0);
+            while(query_split[query_index] != NULL){
+                char** sub_split = g_strsplit(query_split[query_index], "=", 0);
+                if(g_strcmp0(sub_split[0], "bg") == 0){
+                    if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Url"), "/test") != 0){
+                        strcat(client_array[index].background_color, sub_split[1]);   
+                    }
+                }
+                if(sub_split[1] != NULL){
+                    if(strstr(sub_split[1], "=")){
+                        query_index++;
+                        g_strfreev(sub_split);
+                        continue;
+                    }
+                }
+                if(sub_split[1] == NULL){
                     query_index++;
                     g_strfreev(sub_split);
                     continue;
                 }
-            }
-            if(sub_split[1] == NULL){
-                query_index++;
+                g_hash_table_insert(client_array[index].queries, g_strdup(sub_split[0]), 
+                                    g_strdup(sub_split[1]));
                 g_strfreev(sub_split);
-                continue;
+                query_index++;
             }
-            g_hash_table_insert(client_array[index].queries, g_strdup(sub_split[0]), 
-                                g_strdup(sub_split[1]));
-            g_strfreev(sub_split);
-            query_index++;
+            g_strfreev(query_split);
         }
-        g_strfreev(query_split);
     }
+    
     g_hash_table_insert(client_array[index].headers, g_strdup("Version"), g_strdup(first_split[2]));
 
     g_strfreev(first_split);
@@ -660,21 +649,9 @@ void color_page(int connfd, struct clients* client_array, int index) {
     char tmp_buffer[1024];
     memset(tmp_buffer, 0, sizeof(tmp_buffer));
     strcat(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body");
-
-   
-    char* cock = (g_hash_table_lookup(client_array[index].queries, "bg"));
-
-    if(cock != NULL){
-        strcat(tmp_buffer, " style=\"background-color:");
-        strcat(tmp_buffer, cock);
-        strcat(tmp_buffer, "\">");
-    }
-    else{
-        strcat(tmp_buffer, " style=\"background-color:");
-        strcat(tmp_buffer, client_array[index].background_color);
-        strcat(tmp_buffer, "\">");
-    }
-   
+    strcat(tmp_buffer, " style=\"background-color:");
+    strcat(tmp_buffer, client_array[index].background_color);
+    strcat(tmp_buffer, "\">");
     strcat(tmp_buffer, "</body></html>");   
 
     char len_buf[10];
