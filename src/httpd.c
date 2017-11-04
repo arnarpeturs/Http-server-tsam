@@ -14,6 +14,8 @@
 #include <sys/poll.h>
 #include <sys/ioctl.h>
 #include <errno.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #define NO_FD -1
 #define ISTRUE 1 
@@ -22,6 +24,9 @@
 #define KEEP_ALIVE_TIME 30
 #define MAX_PORT 65535
 #define MIN_PORT 1024
+
+static SSL *server_ssl;
+static SSL_CTX *ssl_ctx; 
 
 struct clients
 {
@@ -40,6 +45,7 @@ void debug(char* buffer){
     fflush(stdout);
 }
 
+void init_SSL(int sockfd);
 void start_server(int *sockfd, struct sockaddr_in *server, unsigned short port_number);
 void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* client_array, int index);
 void get_request(int connfd, char* ip_addr, struct clients* client_array, int index);
@@ -76,7 +82,7 @@ int main(int argc, char** argv)
     memset(server_ip, 0, sizeof(server_ip));
 
     start_server(&sockfd, &server, port_number);
-
+    init_SSL(sockfd);
     inet_ntop(AF_INET, &server.sin_addr, server_ip, INET_ADDRSTRLEN);
     
     memset(fds, 0, sizeof(fds));
@@ -292,8 +298,6 @@ void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* cl
     time_t ltime; 
     ltime=time(NULL); 
 
-
-
     char** split_buffer = g_strsplit(in_buffer, "\r\n\r\n", 0);
 
     strcpy(send_buffer, "HTTP/1.1 200 OK\r\nDate: ");
@@ -319,6 +323,7 @@ void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* cl
     strcat(tmp_buffer, "<form method=\"post\">POST DATA: <input type=\"text\" name=\"pdata\"><input type=\"submit\" value=\"Submit\">");
     if(g_str_has_prefix(split_buffer[1], "pdata=")== TRUE){
         char** splitty = g_strsplit(split_buffer[1], "pdata=", 0);
+        
         strcat(tmp_buffer, splitty[1]);
         g_strfreev(splitty);
     }
@@ -371,17 +376,6 @@ void get_request(int connfd, char* ip_addr, struct clients* client_array, int in
     memset(tmp_buffer, 0, sizeof(tmp_buffer));
     strcat(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body");
 
-    char* client_query = g_hash_table_lookup(client_array[index].headers, "Query");
-
-    if(client_query != NULL){
-        char** query_split = g_strsplit(client_query, "=", 0);
-        if(g_strcmp0(query_split[0], "bg") == 0){
-            strcat(tmp_buffer, " style=\"background-color:");
-            strcat(tmp_buffer, query_split[1]);
-            strcat(tmp_buffer, "\"");
-        }
-        g_strfreev(query_split);
-    }
     strcat(tmp_buffer, "><p>");
     strcat(tmp_buffer, "http://");
     strcat(tmp_buffer, g_hash_table_lookup(client_array[index].headers, "Host"));
@@ -629,7 +623,7 @@ void add_queries_to_html(gpointer key, gpointer val, gpointer data){
 }
 
 void color_page(int connfd, struct clients* client_array, int index) {
-
+    g_hash_table_foreach(client_array[index].headers, for_each_func, NULL);
     char send_buffer[1024];
     memset(send_buffer, 0, sizeof(send_buffer));
 
@@ -644,13 +638,41 @@ void color_page(int connfd, struct clients* client_array, int index) {
     else{
         strcat(send_buffer, "Connection: close\r\n");
     }
-    strcat(send_buffer,"Content-type: text/html\r\nContent-Length: ");
+    time_t cookietime = time(NULL) + 3600; 
     
+    strcat(send_buffer, "Set-Cookie: bg=");
+    strcat(send_buffer, client_array[index].background_color);
+    strcat(send_buffer, "; expires=");
+
+    strcat(send_buffer, asctime(localtime(&cookietime)));
+    strcat(send_buffer, "; path=");
+    debug("fyrir");
+    strcat(send_buffer, g_hash_table_lookup(client_array[index].headers, "Url"));
+    debug("eftir");
+    strcat(send_buffer, "; domain=app.localhost:69696; secure\r\n");
+    strcat(send_buffer, "Content-type: text/html\r\nContent-Length: ");
+
     char tmp_buffer[1024];
     memset(tmp_buffer, 0, sizeof(tmp_buffer));
     strcat(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body");
     strcat(tmp_buffer, " style=\"background-color:");
-    strcat(tmp_buffer, client_array[index].background_color);
+
+    debug("inni i enska");
+    char* cookie = g_hash_table_lookup(client_array[index].headers, "Cookie");
+    debug("buttsex");
+    if(cookie != NULL){
+        char** cookie_split = g_strsplit(cookie, "=", 0);
+        debug("general-animalrapist");
+        debug(cookie_split[1]);
+        strcat(tmp_buffer, cookie_split[1]);
+        g_strfreev(cookie_split);
+        debug("exotic-animalrapist");
+    }
+    else{
+        strcat(tmp_buffer, client_array[index].background_color);
+        debug("ock");
+    }
+    
     strcat(tmp_buffer, "\">");
     strcat(tmp_buffer, "</body></html>");   
 
@@ -718,4 +740,21 @@ void test_page(int connfd, struct clients* client_array, int index) {
     strcat(send_buffer, "\r\n\r\n");
     strcat(send_buffer, tmp_buffer);
     send(connfd, send_buffer, strlen(send_buffer), 0);
+}
+
+void init_SSL(int sockfd)
+{
+    // Internal SSL init functions
+    SSL_library_init();
+    SSL_load_error_strings();
+
+    // Authentication
+    if ((ssl_ctx = SSL_CTX_new(TLSv1_method())) == NULL) exit_error("SSL CTX");
+    /*if (SSL_CTX_use_certificate_file(ctx, CERTIFICATE, SSL_FILETYPE_PEM) <= 0) exit_error("certificate");
+    if (SSL_CTX_use_PrivateKey_file(ctx, PRIVATE_KEY, SSL_FILETYPE_PEM) <= 0) exit_error("privatekey");
+    if (SSL_CTX_check_private_key(ctx) != 1) exit_error("match");*/
+    server_ssl = SSL_new(ssl_ctx);
+    SSL_set_fd(server_ssl, sockfd);
+    
+    if(SSL_connect(sockfd) < 0) exit_error("SSL connect");
 }
