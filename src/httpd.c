@@ -24,8 +24,10 @@
 #define KEEP_ALIVE_TIME 30
 #define MAX_PORT 65535
 #define MIN_PORT 1024
+#define CERTIFICATE "../fd.crt"
+#define PRIVATE_KEY "../fd.key"
 
-static SSL *server_ssl;
+//static SSL *server_ssl;
 static SSL_CTX *ssl_ctx; 
 
 struct clients
@@ -45,7 +47,7 @@ void debug(char* buffer){
     fflush(stdout);
 }
 
-void init_SSL(int sockfd);
+void init_SSL(int* sockfd);
 void start_server(int *sockfd, struct sockaddr_in *server, unsigned short port_number);
 void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* client_array, int index);
 void get_request(int connfd, char* ip_addr, struct clients* client_array, int index);
@@ -82,7 +84,7 @@ int main(int argc, char** argv)
     memset(server_ip, 0, sizeof(server_ip));
 
     start_server(&sockfd, &server, port_number);
-    init_SSL(sockfd);
+    init_SSL(&sockfd);
     inet_ntop(AF_INET, &server.sin_addr, server_ip, INET_ADDRSTRLEN);
     
     memset(fds, 0, sizeof(fds));
@@ -244,50 +246,6 @@ void request(char* buffer, int connfd, char* ip_addr, struct clients* client_arr
     }
     g_strfreev(split_buffer);
 }
-/*
-void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* client_array, int index){
-    GString *send_buffer = g_string_new("");
-    time_t ltime; 
-    ltime=time(NULL); 
-
-    //char** split_buffer = g_strsplit(in_buffer, "data=", 2);
-    
-    g_string_append(send_buffer,"HTTP/1.1 200 OK\r\nDate: ");
-    g_string_append(send_buffer, asctime(localtime(&ltime)));
-    
-    if(g_strcmp0(g_hash_table_lookup(client_array[index].headers, "Connection"), "keep-alive") == 0){
-        g_string_append(send_buffer, "Connection: keep-alive\r\n");
-    }   
-    else{
-        g_string_append(send_buffer, "Connection: close\r\n");
-    }
-    g_string_append(send_buffer,"Content-type: text/html\r\nContent-Length: ");
-
-    GString *tmp_buffer = g_string_new("");
-    g_string_append(tmp_buffer, "<!DOCTYPE html><html><head><title>WebSite</title></head><body><p>");
-    g_string_append(tmp_buffer, "http://");
-    g_string_append(tmp_buffer, ip_addr);
-    g_string_append(tmp_buffer, "/ ");
-    g_string_append(tmp_buffer, client_array[index].ip);
-    g_string_append(tmp_buffer, ":");
-    g_string_append(tmp_buffer, client_array[index].port);
-    g_string_append(tmp_buffer, "</p>");
-    g_string_append(tmp_buffer, "<form method=\"post\">POST DATA: <input type=\"text\" name=\"pdata\"><input type=\"submit\" value=\"Submit\">");
-    g_string_append(tmp_buffer, g_hash_table_lookup(client_array[index].headers, "Data"));
-    g_string_append(tmp_buffer, "</body></html>");
-
-    int len = g_strv_length(tmp_buffer);
-    GString *len_buf = g_strdup_printf("%i", len);
-    
-
-    g_string_append(send_buffer, len_buf);
-    g_string_append(send_buffer, "\r\n\r\n");
-    g_string_append(send_buffer, tmp_buffer);
-    send(connfd, send_buffer, strlen(send_buffer), 0);
-    g_string_free(send_buffer, TRUE);
-    g_string_free(tmp_buffer, TRUE);
-    g_string_free(len_buf, TRUE);
-}*/
 
 void post_request(char* in_buffer, int connfd, char* ip_addr, struct clients* client_array, int index){
     char send_buffer[1024];
@@ -742,19 +700,34 @@ void test_page(int connfd, struct clients* client_array, int index) {
     send(connfd, send_buffer, strlen(send_buffer), 0);
 }
 
-void init_SSL(int sockfd)
+void init_SSL(int* sockfd)
 {
     // Internal SSL init functions
     SSL_library_init();
     SSL_load_error_strings();
 
     // Authentication
-    if ((ssl_ctx = SSL_CTX_new(TLSv1_method())) == NULL) exit_error("SSL CTX");
-    /*if (SSL_CTX_use_certificate_file(ctx, CERTIFICATE, SSL_FILETYPE_PEM) <= 0) exit_error("certificate");
-    if (SSL_CTX_use_PrivateKey_file(ctx, PRIVATE_KEY, SSL_FILETYPE_PEM) <= 0) exit_error("privatekey");
-    if (SSL_CTX_check_private_key(ctx) != 1) exit_error("match");*/
-    server_ssl = SSL_new(ssl_ctx);
-    SSL_set_fd(server_ssl, sockfd);
+    if ((ssl_ctx = SSL_CTX_new(TLSv1_method())) == NULL){
+        perror("SSL CTX");
+        exit(EXIT_FAILURE);
+    } 
+    if (SSL_CTX_use_certificate_file(ssl_ctx, CERTIFICATE, SSL_FILETYPE_PEM) <= 0){
+        perror("certificate");
+        exit(EXIT_FAILURE);
+    }
+    if (SSL_CTX_use_PrivateKey_file(ssl_ctx, PRIVATE_KEY, SSL_FILETYPE_PEM) <= 0){
+        perror("privatekey");
+        exit(EXIT_FAILURE);
+    }
+    if (SSL_CTX_check_private_key(ssl_ctx) != 1){
+        perror("match");
+        exit(EXIT_FAILURE);  
+    } 
+    /*server_ssl = SSL_new(ssl_ctx);
+    SSL_set_fd(server_ssl, *sockfd);
     
-    if(SSL_connect(sockfd) < 0) exit_error("SSL connect");
+    if(SSL_connect(server_ssl) < 0){
+      perror("SSL connect");
+      exit(EXIT_FAILURE);  
+    }*/
 }
