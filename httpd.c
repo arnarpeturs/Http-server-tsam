@@ -25,8 +25,8 @@
 #define KEEP_ALIVE_TIME 30
 #define MAX_PORT 65535
 #define MIN_PORT 1024
-#define CERTIFICATE "../fd.crt"
-#define PRIVATE_KEY "../fd.key"
+#define CERTIFICATE "fd.crt"
+#define PRIVATE_KEY "fd.key"
 
 //static SSL *server_ssl;
 static SSL_CTX *ssl_ctx; 
@@ -87,7 +87,7 @@ int main(int argc, char** argv)
     pollfd fds[MAX_FDS];
 
     start_server(&sockfd, &server, port_number);
-   // init_SSL();
+    init_SSL();
     
     memset(fds, 0, sizeof(fds));
     for (int i = 1; i < MAX_FDS; i++) fds[i].fd = -1;
@@ -590,7 +590,7 @@ void color_page(int connfd, struct clients* client_array, int index) {
         //strcat(send_buffer, "; path=");
         //strcat(send_buffer, g_hash_table_lookup(client_array[index].headers, "Url"));
         //strcat(send_buffer, "; domain=app.localhost:6969; secure\r\n");
-        
+
         strcat(send_buffer, "\r\n");
     }
 
